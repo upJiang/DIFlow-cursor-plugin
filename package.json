@@ -1,0 +1,191 @@
+{
+  "publisher": "junfengjiang",
+  "name": "codetoolbox",
+  "displayName": "CodeToolBox",
+  "description": "CodeToolBox，开发小工具",
+  "version": "1.1.1",
+  "icon": "images/title.jpg",
+  "engines": {
+    "vscode": "^1.83.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "CodeToolBox.createScript",
+        "title": "创建区块"
+      },
+      {
+        "command": "CodeToolBox.createSnippets",
+        "title": "创建代码片段"
+      },
+      {
+        "command": "CodeToolBox.openSetting",
+        "title": "设置",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "CodeToolBox.explainByChatGPT",
+        "title": "解释这段文案"
+      },
+      {
+        "command": "CodeToolBox.chatGPTView",
+        "title": "chatGPT对话框"
+      },
+      {
+        "command": "CodeToolBox.openChatGPTView",
+        "title": "打开chatGPT对话框"
+      },
+      {
+        "command": "CodeToolBox.hideChatGPTView",
+        "title": "关闭chatGPT对话框",
+        "icon": "$(close)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "CodeToolBox",
+          "title": "CodeToolBox",
+          "icon": "images/tool.png"
+        }
+      ]
+    },
+    "views": {
+      "CodeToolBox": [
+        {
+          "id": "CodeToolBox.welcome",
+          "name": "welcome",
+          "when": "!CodeToolBox.chatGPTView"
+        },
+        {
+          "type": "webview",
+          "id": "CodeToolBox.chatGPTView",
+          "name": "chatGPT",
+          "when": "CodeToolBox.chatGPTView"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "CodeToolBox.welcome",
+        "contents": "[打开chatGPT对话框](command:CodeToolBox.openChatGPTView)\n[设置](command:CodeToolBox.openSetting)"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "submenu": "CodeToolBox/explorer/context",
+          "when": "explorerResourceIsFolder"
+        }
+      ],
+      "CodeToolBox/explorer/context": [
+        {
+          "command": "CodeToolBox.createScript"
+        }
+      ],
+      "editor/context": [
+        {
+          "submenu": "CodeToolBox/editor/context"
+        }
+      ],
+      "CodeToolBox/editor/context": [
+        {
+          "command": "CodeToolBox.createSnippets"
+        },
+        {
+          "command": "CodeToolBox.explainByChatGPT"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "CodeToolBox.hideChatGPTView",
+          "when": "view == CodeToolBox.chatGPTView",
+          "group": "navigation@4"
+        },
+        {
+          "command": "CodeToolBox.openSetting",
+          "when": "view == CodeToolBox.chatGPTView",
+          "group": "navigation@3"
+        }
+      ]
+    },
+    "submenus": [
+      {
+        "id": "CodeToolBox/explorer/context",
+        "label": "CodeToolBox",
+        "icon": "$(octoface)"
+      },
+      {
+        "id": "CodeToolBox/editor/context",
+        "label": "CodeToolBox",
+        "icon": "$(octoface)"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "CodeToolBox",
+      "properties": {
+        "CodeToolBox.hostname": {
+          "type": "string",
+          "default": "",
+          "description": "第三方代理地址"
+        },
+        "CodeToolBox.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "第三方代理提供的apiKey"
+        },
+        "CodeToolBox.model": {
+          "type": "string",
+          "default": "gpt-3.5-turbo",
+          "description": "chatGPT模型（默认：gpt-3.5-turbo）"
+        }
+      }
+    }
+  },
+  "repository": "https://github.com/upJiang/jiang-vscode-plugin",
+  "scripts": {
+    "dev": "yarn --cwd \"webview-vue\" dev",
+    "build": "yarn --cwd \"webview-vue\" build",
+    "vscode:prepublish": "webpack --mode production && yarn --cwd \"webview-vue\" build",
+    "watch": "webpack --watch",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "yarn run compile-tests && yarn run compile && yarn run lint",
+    "test": "node ./out/test/runTest.js",
+    "tsc": "vue-tsc --noEmit --skipLibCheck"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^17.7.2",
+    "@commitlint/config-conventional": "^17.7.0",
+    "@types/mocha": "^10.0.2",
+    "@types/vscode": "^1.83.0",
+    "@typescript-eslint/eslint-plugin": "^6.7.5",
+    "@typescript-eslint/parser": "^6.7.5",
+    "@vscode/test-electron": "^2.3.4",
+    "babel-eslint": "^10.1.0",
+    "eslint": "^8.51.0",
+    "eslint-plugin-prettier": "^5.0.1",
+    "glob": "^10.3.3",
+    "husky": "^8.0.3",
+    "lint-staged": "^14.0.1",
+    "mocha": "^10.2.0",
+    "prettier": "^3.0.3",
+    "ts-loader": "^9.4.4",
+    "typescript": "^5.2.2",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4"
+  },
+  "galleryBanner": {
+    "color": "#1890ff"
+  },
+  "dependencies": {
+    "fs-extra": "^11.1.1",
+    "vscode-webview-tool": "^1.0.4"
+  }
+}
