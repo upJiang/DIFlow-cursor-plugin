@@ -53,6 +53,8 @@ watch(
 @import url("./index.scss");
 </style>
 <style>
+@import url("./index.scss");
+
 .dot {
   width: 12px;
   height: 12px;
@@ -64,6 +66,4 @@ watch(
 
   animation: fadeIn 1.6s forwards infinite;
 }
-
-@import url("./index.scss");
 </style>

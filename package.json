@@ -1,9 +1,9 @@
 {
   "publisher": "junfengjiang",
-  "name": "codetoolbox",
-  "displayName": "CodeToolBox",
-  "description": "CodeToolBox，开发小工具",
-  "version": "1.1.1",
+  "name": "diflow",
+  "displayName": "diflow",
+  "description": "diflow",
+  "version": "1.0.0",
   "icon": "images/title.jpg",
   "engines": {
     "vscode": "^1.83.0"
