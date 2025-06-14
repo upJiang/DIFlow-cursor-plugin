@@ -1,9 +1,9 @@
 {
   "publisher": "junfengjiang",
-  "name": "diflow",
-  "displayName": "diflow",
-  "description": "diflow",
-  "version": "1.0.0",
+  "name": "diflow", 
+  "displayName": "DiFlow",
+  "description": "DiFlow，开发小工具",
+  "version": "1.1.1",
   "icon": "images/title.jpg",
   "engines": {
     "vscode": "^1.83.0"
@@ -11,37 +11,36 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
-        "command": "CodeToolBox.createScript",
+        "command": "DiFlow.createScript",
         "title": "创建区块"
       },
       {
-        "command": "CodeToolBox.createSnippets",
+        "command": "DiFlow.createSnippets",
         "title": "创建代码片段"
       },
       {
-        "command": "CodeToolBox.openSetting",
+        "command": "DiFlow.openSetting",
         "title": "设置",
         "icon": "$(gear)"
       },
       {
-        "command": "CodeToolBox.explainByChatGPT",
+        "command": "DiFlow.explainByChatGPT",
         "title": "解释这段文案"
       },
       {
-        "command": "CodeToolBox.chatGPTView",
+        "command": "DiFlow.chatGPTView",
         "title": "chatGPT对话框"
       },
       {
-        "command": "CodeToolBox.openChatGPTView",
+        "command": "DiFlow.openChatGPTView",
         "title": "打开chatGPT对话框"
       },
       {
-        "command": "CodeToolBox.hideChatGPTView",
+        "command": "DiFlow.hideChatGPTView",
         "title": "关闭chatGPT对话框",
         "icon": "$(close)"
       }
@@ -49,98 +48,98 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "CodeToolBox",
-          "title": "CodeToolBox",
+          "id": "DiFlow",
+          "title": "DiFlow",
           "icon": "images/tool.png"
         }
       ]
     },
     "views": {
-      "CodeToolBox": [
+      "DiFlow": [
         {
-          "id": "CodeToolBox.welcome",
+          "id": "DiFlow.welcome",
           "name": "welcome",
-          "when": "!CodeToolBox.chatGPTView"
+          "when": "!DiFlow.chatGPTView"
         },
         {
           "type": "webview",
-          "id": "CodeToolBox.chatGPTView",
+          "id": "DiFlow.chatGPTView",
           "name": "chatGPT",
-          "when": "CodeToolBox.chatGPTView"
+          "when": "DiFlow.chatGPTView"
         }
       ]
     },
     "viewsWelcome": [
       {
-        "view": "CodeToolBox.welcome",
-        "contents": "[打开chatGPT对话框](command:CodeToolBox.openChatGPTView)\n[设置](command:CodeToolBox.openSetting)"
+        "view": "DiFlow.welcome",
+        "contents": "[打开chatGPT对话框](command:DiFlow.openChatGPTView)\n[设置](command:DiFlow.openSetting)"
       }
     ],
     "menus": {
       "explorer/context": [
         {
-          "submenu": "CodeToolBox/explorer/context",
+          "submenu": "DiFlow/explorer/context",
           "when": "explorerResourceIsFolder"
         }
       ],
-      "CodeToolBox/explorer/context": [
+      "DiFlow/explorer/context": [
         {
-          "command": "CodeToolBox.createScript"
+          "command": "DiFlow.createScript"
         }
       ],
       "editor/context": [
         {
-          "submenu": "CodeToolBox/editor/context"
+          "submenu": "DiFlow/editor/context"
         }
       ],
-      "CodeToolBox/editor/context": [
+      "DiFlow/editor/context": [
         {
-          "command": "CodeToolBox.createSnippets"
+          "command": "DiFlow.createSnippets"
         },
         {
-          "command": "CodeToolBox.explainByChatGPT"
+          "command": "DiFlow.explainByChatGPT"
         }
       ],
       "view/title": [
         {
-          "command": "CodeToolBox.hideChatGPTView",
-          "when": "view == CodeToolBox.chatGPTView",
+          "command": "DiFlow.hideChatGPTView",
+          "when": "view == DiFlow.chatGPTView",
           "group": "navigation@4"
         },
         {
-          "command": "CodeToolBox.openSetting",
-          "when": "view == CodeToolBox.chatGPTView",
+          "command": "DiFlow.openSetting",
+          "when": "view == DiFlow.chatGPTView",
           "group": "navigation@3"
         }
       ]
     },
     "submenus": [
       {
-        "id": "CodeToolBox/explorer/context",
-        "label": "CodeToolBox",
+        "id": "DiFlow/explorer/context",
+        "label": "DiFlow",
         "icon": "$(octoface)"
       },
       {
-        "id": "CodeToolBox/editor/context",
-        "label": "CodeToolBox",
+        "id": "DiFlow/editor/context",
+        "label": "DiFlow",
         "icon": "$(octoface)"
       }
     ],
     "configuration": {
       "type": "object",
-      "title": "CodeToolBox",
+      "title": "DiFlow",
       "properties": {
-        "CodeToolBox.hostname": {
+        "DiFlow.hostname": {
           "type": "string",
           "default": "",
           "description": "第三方代理地址"
         },
-        "CodeToolBox.apiKey": {
+        "DiFlow.apiKey": {
           "type": "string",
           "default": "",
           "description": "第三方代理提供的apiKey"
         },
-        "CodeToolBox.model": {
+        "DiFlow.model": {
           "type": "string",
           "default": "gpt-3.5-turbo",
           "description": "chatGPT模型（默认：gpt-3.5-turbo）"

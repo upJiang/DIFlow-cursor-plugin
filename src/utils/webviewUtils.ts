@@ -40,8 +40,8 @@ export const showWebView = (
     }
   } else {
     const panel = vscode.window.createWebviewPanel(
-      "CodeToolBox",
-      options.title || "CodeToolBox",
+      "DiFlow",
+      options.title || "DiFlow",
       {
         viewColumn: options.viewColumn || vscode.ViewColumn.Two,
       },
@@ -122,13 +122,15 @@ export const getHtmlForWebview = (
   const isProduction =
     context.extensionMode === vscode.ExtensionMode.Production;
   let srcUrl: string | vscode.Uri = "";
-  if (isProduction) {
+  console.log("isProduction", isProduction);
+  
+  if (!isProduction) {
     const mainScriptPathOnDisk = vscode.Uri.file(
       path.join(context.extensionPath, "webview-dist", "main.mjs"),
     );
     srcUrl = webview.asWebviewUri(mainScriptPathOnDisk);
   } else {
-    srcUrl = "http://127.0.0.1:7979/src/main.ts";
+    srcUrl = "http://localhost:7979/src/main.ts";
   }
 
   return getWebviewContent(srcUrl);

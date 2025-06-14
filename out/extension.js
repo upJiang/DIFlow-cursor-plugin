@@ -5,7 +5,7 @@ const vscode = require("vscode");
 const path = require("path");
 function activate(context) {
   let disposable = vscode.commands.registerCommand(
-    "CodeToolBox.webview",
+    "DiFlow.webview",
     () => {
       vscode.window.showInformationMessage(
         "Hello World from my-vscode-extendsion!",

@@ -53,11 +53,11 @@ class MyWebviewViewProvider implements WebviewViewProvider {
 
 const openChatGPTView = (selectedText?: string) => {
   // 唤醒 chatGPT 视图
-  commands.executeCommand("workbench.view.extension.CodeToolBox").then(() => {
+  commands.executeCommand("workbench.view.extension.DiFlow").then(() => {
     commands
-      .executeCommand("setContext", "CodeToolBox.chatGPTView", true)
+      .executeCommand("setContext", "DiFlow.chatGPTView", true)
       .then(() => {
-        const config = workspace.getConfiguration("CodeToolBox");
+        const config = workspace.getConfiguration("DiFlow");
         const hostname = config.get("hostname");
         const apiKey = config.get("apiKey");
         const model = config.get("model");
@@ -89,7 +89,7 @@ export const registerCreateChatGPTView = (context: ExtensionContext) => {
   webviewViewProvider = new MyWebviewViewProvider(context);
   context.subscriptions.push(
     window.registerWebviewViewProvider(
-      "CodeToolBox.chatGPTView",
+      "DiFlow.chatGPTView",
       webviewViewProvider,
       {
         webviewOptions: {
@@ -101,21 +101,21 @@ export const registerCreateChatGPTView = (context: ExtensionContext) => {
 
   context.subscriptions.push(
     // 添加打开视图
-    commands.registerCommand("CodeToolBox.openChatGPTView", () => {
+    commands.registerCommand("DiFlow.openChatGPTView", () => {
       openChatGPTView();
     }),
 
     // 添加关闭视图
-    commands.registerCommand("CodeToolBox.hideChatGPTView", () => {
+    commands.registerCommand("DiFlow.hideChatGPTView", () => {
       commands
-        .executeCommand("setContext", "CodeToolBox.chatGPTView", false)
+        .executeCommand("setContext", "DiFlow.chatGPTView", false)
         .then(() => {
           webviewViewProvider?.removeWebView();
         });
     }),
 
     // 添加解释这段文案
-    commands.registerCommand("CodeToolBox.explainByChatGPT", () => {
+    commands.registerCommand("DiFlow.explainByChatGPT", () => {
       // 获取当前活动的文本编辑器
       const editor = window.activeTextEditor;
 
@@ -128,18 +128,18 @@ export const registerCreateChatGPTView = (context: ExtensionContext) => {
         }
 
         // 获取本插件的设置
-        const config = workspace.getConfiguration("CodeToolBox");
+        const config = workspace.getConfiguration("DiFlow");
         const hostname = config.get("hostname");
         const apiKey = config.get("apiKey");
         if (!hostname) {
           window.showInformationMessage(
-            "请先设置插件 CodeToolBox 的 hostname，点击左侧标签栏 CodeToolBox 的图标进行设置",
+            "请先设置插件 DiFlow 的 hostname，点击左侧标签栏 DiFlow 的图标进行设置",
           );
           return;
         }
         if (!apiKey) {
           window.showInformationMessage(
-            "请先设置插件 CodeToolBox 的 apiKey，点击左侧标签栏 CodeToolBox 的图标进行设置",
+            "请先设置插件 DiFlow 的 apiKey，点击左侧标签栏 DiFlow 的图标进行设置",
           );
           return;
         }
