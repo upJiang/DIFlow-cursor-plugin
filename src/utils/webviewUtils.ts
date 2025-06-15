@@ -3,6 +3,7 @@ import * as snippet from "../webview/controllers/addSnippets";
 import { CursorIntegration } from "../commands/cursorIntegration";
 
 const path = require("path");
+const fs = require("fs");
 
 // webview key，后期用于区分任务
 type WebViewKeys = "main" | "cursor";
@@ -21,7 +22,13 @@ type Tasks =
   | "getUserRules"
   | "updateUserRules"
   | "getSystemInfo"
-  | "setCustomInstallPath";
+  | "setCustomInstallPath"
+  | "getCursorUserInfo"
+  | "isCursorLoggedIn"
+  | "loginOrCreateUser"
+  | "syncUserData"
+  | "syncRulesToServer"
+  | "syncMcpsToServer";
 
 // 当前的webview列表
 let webviewPanelList: {
@@ -677,6 +684,246 @@ taskMap.setCustomInstallPath = async (
         data: {
           success: false,
           error: error instanceof Error ? error.message : String(error),
+        },
+      });
+    }
+  }
+};
+
+// 获取 Cursor 用户信息任务处理器
+taskMap.getCursorUserInfo = async (
+  context: vscode.ExtensionContext,
+  message: any
+) => {
+  try {
+    console.log("获取 Cursor 用户信息...");
+    const userInfo = await cursorIntegration.getCursorUserInfo();
+    console.log("Cursor 用户信息:", userInfo);
+
+    // 发送结果回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: true,
+          data: userInfo,
+        },
+      });
+    }
+  } catch (error: any) {
+    console.error("getCursorUserInfo task failed:", error);
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: error.message,
+        },
+      });
+    }
+  }
+};
+
+// 检查 Cursor 登录状态任务处理器
+taskMap.isCursorLoggedIn = async (
+  context: vscode.ExtensionContext,
+  message: any
+) => {
+  try {
+    console.log("检查 Cursor 登录状态...");
+    const isLoggedIn = await cursorIntegration.isCursorLoggedIn();
+    console.log("Cursor 登录状态:", isLoggedIn);
+
+    // 发送结果回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: true,
+          data: isLoggedIn,
+        },
+      });
+    }
+  } catch (error: any) {
+    console.error("isCursorLoggedIn task failed:", error);
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: error.message,
+        },
+      });
+    }
+  }
+};
+
+// 登录或创建用户任务处理器
+taskMap.loginOrCreateUser = async (
+  context: vscode.ExtensionContext,
+  message: any
+) => {
+  try {
+    console.log("获取Cursor用户信息...", message.data);
+
+    // 获取Cursor用户信息
+    const cursorUserInfo = await cursorIntegration.getCursorUserInfo();
+    console.log("Cursor用户信息:", cursorUserInfo);
+
+    // 发送用户信息到webview，让webview处理API调用
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: true,
+          data: cursorUserInfo,
+        },
+      });
+    }
+  } catch (error: any) {
+    console.error("loginOrCreateUser task failed:", error);
+
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: error.message,
+        },
+      });
+    }
+  }
+};
+
+// 同步用户数据任务处理器 - 简化为只返回成功状态
+taskMap.syncUserData = async (
+  context: vscode.ExtensionContext,
+  message: any
+) => {
+  try {
+    console.log("同步用户数据任务 - 由webview处理", message.data);
+
+    // 发送结果回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: true,
+          message: "任务已转发到webview处理",
+        },
+      });
+    }
+  } catch (error: any) {
+    console.error("syncUserData task failed:", error);
+
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: error.message,
+        },
+      });
+    }
+  }
+};
+
+// 同步规则到服务器任务处理器 - 简化为只返回成功状态
+taskMap.syncRulesToServer = async (
+  context: vscode.ExtensionContext,
+  message: any
+) => {
+  try {
+    console.log("同步规则到服务器任务 - 由webview处理", message.data);
+
+    // 发送结果回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: true,
+          message: "任务已转发到webview处理",
+        },
+      });
+    }
+  } catch (error: any) {
+    console.error("syncRulesToServer task failed:", error);
+
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: error.message,
+        },
+      });
+    }
+  }
+};
+
+// 同步 MCP 配置到服务器任务处理器 - 简化为只返回成功状态
+taskMap.syncMcpsToServer = async (
+  context: vscode.ExtensionContext,
+  message: any
+) => {
+  try {
+    console.log("同步MCP配置到服务器任务 - 由webview处理", message.data);
+
+    // 发送结果回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: true,
+          message: "任务已转发到webview处理",
+        },
+      });
+    }
+  } catch (error: any) {
+    console.error("syncMcpsToServer task failed:", error);
+
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: error.message,
         },
       });
     }

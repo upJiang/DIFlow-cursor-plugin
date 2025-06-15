@@ -186,12 +186,21 @@
     "pretest": "yarn run compile-tests && yarn run compile && yarn run lint",
     "test": "node ./out/test/runTest.js",
     "tsc": "vue-tsc --noEmit --skipLibCheck",
-    "install:all": "yarn install && cd webview-vue && yarn install && cd ../server && yarn install",
+    "install:all": "yarn install && cd webview-vue && yarn install && cd server && yarn install",
     "dev:all": "concurrently \"yarn dev\" \"yarn server:dev\"",
+    "start:all": "concurrently \"yarn vscode:prepublish\" \"yarn server:start\"",
+    "build:all": "yarn vscode:prepublish && yarn server:build",
     "server:dev": "cd server && yarn dev",
     "server:build": "cd server && yarn build",
     "server:start": "cd server && yarn start",
-    "server:install": "cd server && yarn install"
+    "server:install": "cd server && yarn install",
+    "setup": "yarn install:all",
+    "dev:plugin": "webpack --watch",
+    "dev:frontend": "yarn --cwd \"webview-vue\" dev",
+    "dev:backend": "cd server && yarn dev",
+    "quick:start": "concurrently \"yarn dev:plugin\" \"yarn dev:frontend\" \"yarn dev:backend\"",
+    "clean": "rm -rf node_modules webview-vue/node_modules server/node_modules dist webview-vue/dist server/dist",
+    "fresh:install": "yarn clean && yarn setup"
   },
   "devDependencies": {
     "@commitlint/cli": "^17.7.2",
@@ -219,6 +228,7 @@
     "color": "#1890ff"
   },
   "dependencies": {
+    "axios": "^1.10.0",
     "fs-extra": "^11.1.1",
     "vscode-webview-tool": "^1.0.4"
   }

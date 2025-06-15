@@ -1042,6 +1042,54 @@ export class CursorIntegration {
   }
 
   /**
+   * 获取 Cursor 用户信息
+   */
+  async getCursorUserInfo(): Promise<{
+    isLoggedIn: boolean;
+    email?: string;
+    name?: string;
+  }> {
+    try {
+      // 检查 Cursor 设置文件是否存在
+      if (
+        !this.configPaths.settingsPath ||
+        !fs.existsSync(this.configPaths.settingsPath)
+      ) {
+        return { isLoggedIn: false };
+      }
+
+      // 读取设置文件
+      const settingsContent = fs.readFileSync(
+        this.configPaths.settingsPath,
+        "utf-8"
+      );
+      const settings = JSON.parse(settingsContent);
+
+      // 检查用户信息
+      const email =
+        settings["cursor.account.email"] || settings["account.email"];
+      const name = settings["cursor.account.name"] || settings["account.name"];
+
+      return {
+        isLoggedIn: !!email,
+        email,
+        name,
+      };
+    } catch (error) {
+      console.error("获取 Cursor 用户信息失败:", error);
+      return { isLoggedIn: false };
+    }
+  }
+
+  /**
+   * 检查 Cursor 是否已登录
+   */
+  async isCursorLoggedIn(): Promise<boolean> {
+    const userInfo = await this.getCursorUserInfo();
+    return userInfo.isLoggedIn;
+  }
+
+  /**
    * 获取系统信息
    */
   getSystemInfo(): {
