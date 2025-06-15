@@ -1,6 +1,6 @@
 {
   "publisher": "junfengjiang",
-  "name": "diflow", 
+  "name": "diflow",
   "displayName": "DiFlow",
   "description": "DiFlow，开发小工具",
   "version": "1.1.1",
@@ -43,6 +43,22 @@
         "command": "DiFlow.hideChatGPTView",
         "title": "关闭chatGPT对话框",
         "icon": "$(close)"
+      },
+      {
+        "command": "DiFlow.getCursorSettings",
+        "title": "获取 Cursor 设置"
+      },
+      {
+        "command": "DiFlow.updateCursorSettings",
+        "title": "更新 Cursor 设置"
+      },
+      {
+        "command": "DiFlow.openCursorChat",
+        "title": "打开 Cursor 对话"
+      },
+      {
+        "command": "DiFlow.cursorManagement",
+        "title": "Cursor 管理"
       }
     ],
     "viewsContainers": {
@@ -57,6 +73,7 @@
     "views": {
       "DiFlow": [
         {
+          "type": "tree",
           "id": "DiFlow.welcome",
           "name": "welcome",
           "when": "!DiFlow.chatGPTView"
@@ -72,7 +89,7 @@
     "viewsWelcome": [
       {
         "view": "DiFlow.welcome",
-        "contents": "[打开chatGPT对话框](command:DiFlow.openChatGPTView)\n[设置](command:DiFlow.openSetting)"
+        "contents": "[打开chatGPT对话框](command:DiFlow.openChatGPTView)\n[设置](command:DiFlow.openSetting)\n[Cursor 管理](command:DiFlow.cursorManagement)"
       }
     ],
     "menus": {
@@ -110,6 +127,17 @@
           "command": "DiFlow.openSetting",
           "when": "view == DiFlow.chatGPTView",
           "group": "navigation@3"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "DiFlow.getCursorSettings"
+        },
+        {
+          "command": "DiFlow.updateCursorSettings"
+        },
+        {
+          "command": "DiFlow.openCursorChat"
         }
       ]
     },
@@ -157,7 +185,13 @@
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "yarn run compile-tests && yarn run compile && yarn run lint",
     "test": "node ./out/test/runTest.js",
-    "tsc": "vue-tsc --noEmit --skipLibCheck"
+    "tsc": "vue-tsc --noEmit --skipLibCheck",
+    "install:all": "yarn install && cd webview-vue && yarn install && cd ../server && yarn install",
+    "dev:all": "concurrently \"yarn dev\" \"yarn server:dev\"",
+    "server:dev": "cd server && yarn dev",
+    "server:build": "cd server && yarn build",
+    "server:start": "cd server && yarn start",
+    "server:install": "cd server && yarn install"
   },
   "devDependencies": {
     "@commitlint/cli": "^17.7.2",
@@ -168,6 +202,7 @@
     "@typescript-eslint/parser": "^6.7.5",
     "@vscode/test-electron": "^2.3.4",
     "babel-eslint": "^10.1.0",
+    "concurrently": "^8.2.2",
     "eslint": "^8.51.0",
     "eslint-plugin-prettier": "^5.0.1",
     "glob": "^10.3.3",
