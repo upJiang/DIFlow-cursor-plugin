@@ -33,20 +33,14 @@ export function sendTaskToVscode(task: string, data?: any): Promise<any> {
   return new Promise((resolve, reject) => {
     const cbid = `${Date.now()}${Math.round(Math.random() * 100000)}`;
 
-    // 监听响应
-    const handleMessage = (event: MessageEvent) => {
-      const message = event.data;
-      if (message.cbid === cbid) {
-        window.removeEventListener("message", handleMessage);
-        if (message.error) {
-          reject(new Error(message.error));
-        } else {
-          resolve(message.data);
-        }
+    // 存储回调函数
+    callbacks[cbid] = (responseData: any) => {
+      if (responseData.success) {
+        resolve(responseData.data);
+      } else {
+        reject(new Error(responseData.error || "任务执行失败"));
       }
     };
-
-    window.addEventListener("message", handleMessage);
 
     // 发送消息
     if (window.vscode) {
@@ -58,6 +52,14 @@ export function sendTaskToVscode(task: string, data?: any): Promise<any> {
     } else {
       reject(new Error("VSCode API 不可用"));
     }
+
+    // 设置超时
+    setTimeout(() => {
+      if (callbacks[cbid]) {
+        delete callbacks[cbid];
+        reject(new Error("请求超时"));
+      }
+    }, 30000); // 30秒超时
   });
 }
 
@@ -67,6 +69,14 @@ export const initMessageListener = () => {
     console.log("监听到信息", event.data);
 
     const message = event.data;
+
+    // 处理回调消息
+    if (message.cbid && callbacks[message.cbid]) {
+      callbacks[message.cbid](message.data);
+      delete callbacks[message.cbid];
+      return;
+    }
+
     switch (message.cmd) {
       case "vscodePushTask":
         if (taskHandler[message.task]) {
@@ -78,7 +88,7 @@ export const initMessageListener = () => {
         } else if (message.task === "openCursorChat") {
           taskHandler.openCursorChat(message.data);
         } else {
-          message.error(`未找到名为 ${message.task} 回调方法!`);
+          console.error(`未找到名为 ${message.task} 的回调方法!`);
         }
         break;
     }

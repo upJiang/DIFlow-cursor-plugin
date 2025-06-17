@@ -42,6 +42,7 @@ declare global {
   interface ImportMetaEnv {
     NODE_ENV: string;
     VITE_MAIN_HOST: string;
+    VITE_API_BASE_URL: string;
   }
 
   declare function parseInt(s: string | number, radix?: number): number;

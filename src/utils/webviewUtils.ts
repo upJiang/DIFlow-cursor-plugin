@@ -28,7 +28,9 @@ type Tasks =
   | "loginOrCreateUser"
   | "syncUserData"
   | "syncRulesToServer"
-  | "syncMcpsToServer";
+  | "syncMcpsToServer"
+  | "networkRequest"
+  | "proxyRequest";
 
 // 当前的webview列表
 let webviewPanelList: {
@@ -170,6 +172,7 @@ const getWebviewContent = (srcUri: string | vscode.Uri) => {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' vscode-webview: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; style-src 'unsafe-inline' vscode-webview: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; connect-src vscode-webview: http://localhost:* https://localhost:* ws://localhost:* wss://localhost:* http://127.0.0.1:* https://127.0.0.1:* ws://127.0.0.1:* wss://127.0.0.1:*; img-src vscode-webview: data: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; font-src vscode-webview: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*;">
       <title>webview-react</title>
       <script>
          window.vscode = acquireVsCodeApi();
@@ -178,6 +181,8 @@ const getWebviewContent = (srcUri: string | vscode.Uri) => {
              NODE_ENV: "production",
            },
          }
+         // 添加调试信息
+         console.log("Webview CSP configured for localhost and 127.0.0.1");
       </script>
     </head>
     <body>
@@ -924,6 +929,239 @@ taskMap.syncMcpsToServer = async (
         data: {
           success: false,
           error: error.message,
+        },
+      });
+    }
+  }
+};
+
+// 网络请求处理器 - 允许 webview 通过扩展进行网络请求
+taskMap.networkRequest = async (
+  context: vscode.ExtensionContext,
+  message: any
+) => {
+  try {
+    const { url, method = "GET", headers = {}, body } = message.data;
+    console.log(`网络请求: ${method} ${url}`);
+
+    // 使用 Node.js 的 https/http 模块进行请求
+    const https = require("https");
+    const http = require("http");
+    const { URL } = require("url");
+
+    const parsedUrl = new URL(url);
+    const isHttps = parsedUrl.protocol === "https:";
+    const requestModule = isHttps ? https : http;
+
+    const requestOptions = {
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port || (isHttps ? 443 : 80),
+      path: parsedUrl.pathname + parsedUrl.search,
+      method: method,
+      headers: {
+        "User-Agent": "DIFlow-VSCode-Extension/1.0.0",
+        ...headers,
+      },
+    };
+
+    const result = await new Promise((resolve, reject) => {
+      const req = requestModule.request(requestOptions, (res: any) => {
+        let data = "";
+        res.on("data", (chunk: any) => {
+          data += chunk;
+        });
+        res.on("end", () => {
+          try {
+            let parsedData;
+            try {
+              parsedData = JSON.parse(data);
+            } catch {
+              parsedData = data;
+            }
+
+            resolve({
+              ok: res.statusCode >= 200 && res.statusCode < 300,
+              status: res.statusCode,
+              statusText: res.statusMessage,
+              data: parsedData,
+              text: data,
+              headers: res.headers,
+            });
+          } catch (error) {
+            reject(error);
+          }
+        });
+      });
+
+      req.on("error", (error: any) => {
+        reject(error);
+      });
+
+      if (
+        body &&
+        (method === "POST" || method === "PUT" || method === "PATCH")
+      ) {
+        req.write(typeof body === "string" ? body : JSON.stringify(body));
+      }
+
+      req.end();
+    });
+
+    console.log(`网络请求完成: ${method} ${url} - ${(result as any).status}`);
+
+    // 发送结果回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: true,
+          data: result,
+        },
+      });
+    }
+  } catch (error: any) {
+    console.error("网络请求失败:", error);
+
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: error.message,
+        },
+      });
+    }
+  }
+};
+
+// 网络请求代理任务
+taskMap.proxyRequest = async (
+  context: vscode.ExtensionContext,
+  message: any
+) => {
+  try {
+    console.log("代理网络请求:", message.data);
+    const { method, url, data, headers } = message.data;
+
+    // 使用 Node.js 的 https/http 模块发送请求
+    const https = require("https");
+    const http = require("http");
+    const urlLib = require("url");
+
+    const parsedUrl = urlLib.parse(url);
+    const isHttps = parsedUrl.protocol === "https:";
+    const requestLib = isHttps ? https : http;
+
+    // 构建请求选项
+    const options = {
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port || (isHttps ? 443 : 80),
+      path: parsedUrl.path,
+      method: method.toUpperCase(),
+      headers: {
+        "Content-Type": "application/json",
+        "User-Agent": "DIFlow-VSCode-Extension/1.0.0",
+        ...headers,
+      },
+      // 忽略 SSL 证书验证（仅用于开发）
+      rejectUnauthorized: false,
+    };
+
+    console.log("代理请求选项:", options);
+
+    // 发送请求
+    const result = await new Promise((resolve, reject) => {
+      const req = requestLib.request(options, (res: any) => {
+        let responseData = "";
+
+        res.on("data", (chunk: any) => {
+          responseData += chunk;
+        });
+
+        res.on("end", () => {
+          try {
+            console.log("原始响应数据:", responseData);
+            const parsedData = responseData ? JSON.parse(responseData) : {};
+            resolve({
+              success: true,
+              status: res.statusCode,
+              data: parsedData,
+              headers: res.headers,
+            });
+          } catch (parseError) {
+            console.log("JSON解析失败，返回原始数据:", parseError);
+            resolve({
+              success: true,
+              status: res.statusCode,
+              data: responseData,
+              headers: res.headers,
+            });
+          }
+        });
+      });
+
+      req.on("error", (error: any) => {
+        console.error("代理请求错误:", error);
+        reject({
+          success: false,
+          message: `网络请求失败: ${error.message}`,
+          error: error,
+        });
+      });
+
+      req.setTimeout(10000, () => {
+        req.destroy();
+        reject({
+          success: false,
+          message: "请求超时",
+          error: new Error("Request timeout"),
+        });
+      });
+
+      // 发送请求体数据
+      if (
+        data &&
+        (method.toUpperCase() === "POST" || method.toUpperCase() === "PUT")
+      ) {
+        const jsonData = JSON.stringify(data);
+        console.log("发送请求体数据:", jsonData);
+        req.write(jsonData);
+      }
+
+      req.end();
+    });
+
+    console.log("代理请求成功:", result);
+
+    // 发送结果回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: result,
+      });
+    }
+  } catch (error: any) {
+    console.error("proxyRequest task failed:", error);
+    // 发送错误回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          message: error.message || "网络请求失败",
+          error: error,
         },
       });
     }

@@ -45,6 +45,7 @@
 </template>
 
 <script lang="ts" setup>
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 declare const vscode: any;
 
 /**

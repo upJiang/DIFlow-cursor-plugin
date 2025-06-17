@@ -58,7 +58,7 @@ const testing = ref(false);
 const logs = ref<LogItem[]>([]);
 const logsContainer = ref<HTMLElement>();
 const currentEnv = ref("development");
-const apiBaseUrl = ref("http://localhost:6666/diflow/api");
+const apiBaseUrl = ref("http://localhost:3001/diflow/api");
 
 // 添加日志
 const addLog = (message: string, type: LogItem["type"] = "info") => {
@@ -210,7 +210,7 @@ onMounted(() => {
     apiBaseUrl.value = "http://junfeng530.xyz/diflow/api";
   } else {
     currentEnv.value = "development";
-    apiBaseUrl.value = "http://localhost:6666/diflow/api";
+    apiBaseUrl.value = "http://localhost:3001/diflow/api";
   }
 
   addLog("API测试页面已加载", "info");

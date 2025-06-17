@@ -187,7 +187,9 @@
     "test": "node ./out/test/runTest.js",
     "tsc": "vue-tsc --noEmit --skipLibCheck",
     "install:all": "yarn install && cd webview-vue && yarn install && cd server && yarn install",
-    "dev:all": "concurrently \"yarn dev\" \"yarn server:dev\"",
+    "dev:all": "node dev-all.js",
+    "dev:server": "node server/dev-server.js",
+    "dev:webview": "node dev-webview.js",
     "start:all": "concurrently \"yarn vscode:prepublish\" \"yarn server:start\"",
     "build:all": "yarn vscode:prepublish && yarn server:build",
     "server:dev": "cd server && yarn dev",
@@ -228,6 +230,7 @@
     "color": "#1890ff"
   },
   "dependencies": {
+    "@playwright/test": "^1.53.0",
     "axios": "^1.10.0",
     "fs-extra": "^11.1.1",
     "vscode-webview-tool": "^1.0.4"

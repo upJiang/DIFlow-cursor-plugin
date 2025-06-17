@@ -9,7 +9,7 @@ export const testApiCalls = async () => {
   console.log("=== 开始API测试 ===");
   console.log(
     "当前API基础URL:",
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:6666/diflow/api",
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/diflow",
   );
 
   // 测试用户邮箱
@@ -102,10 +102,10 @@ export const testApiCalls = async () => {
 export const testNetworkConnection = async () => {
   console.log("=== 测试网络连接 ===");
   const baseUrl =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:6666/diflow/api";
+    import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/diflow";
 
   try {
-    const response = await fetch(baseUrl.replace("/api", "/health"), {
+    const response = await fetch(baseUrl + "/health", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

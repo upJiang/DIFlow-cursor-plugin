@@ -1,919 +1,1105 @@
 <template>
-  <div class="cursor-management">
-    <div class="background-decoration"></div>
-    <a-card title="Cursor 集成管理" class="main-card">
-      <a-tabs v-model:activeKey="activeTab" type="card">
-        <!-- 基本信息 Tab -->
-        <a-tab-pane key="basic" tab="基本信息">
-          <div class="tab-content">
-            <!-- 状态检查区域 -->
-            <a-card title="状态检查" size="small" class="section-card">
-              <div class="status-section">
-                <a-space direction="vertical" style="width: 100%">
-                  <div class="status-item">
-                    <a-space>
-                      <a-badge
-                        :status="cursorStatus.installed ? 'success' : 'error'"
-                      />
-                      <span>
-                        Cursor 安装状态:
-                        {{ cursorStatus.installed ? "已安装" : "未安装" }}
-                      </span>
-                      <a-button
-                        size="small"
-                        @click="checkCursorStatus"
-                        :loading="loading.status"
-                      >
-                        刷新状态
-                      </a-button>
-                      <a-button
-                        v-if="!cursorStatus.installed"
-                        size="small"
-                        type="primary"
-                        @click="showCustomPathModal"
-                      >
-                        设置安装路径
-                      </a-button>
-                    </a-space>
-                  </div>
+  <div class="cursor-page">
+    <div class="page-header">
+      <h2>Cursor 管理中心</h2>
+      <p>管理 Cursor 编辑器的集成功能和配置</p>
+    </div>
 
-                  <div v-if="cursorStatus.installed" class="status-details">
-                    <a-descriptions size="small" :column="1" bordered>
-                      <a-descriptions-item label="操作系统">
-                        {{ getPlatformName(systemInfo.platform) }}
-                      </a-descriptions-item>
-                      <a-descriptions-item label="配置文件路径">
-                        <a-typography-text
-                          :copyable="systemInfo.configPath !== '未找到'"
-                          code
-                        >
-                          {{ systemInfo.configPath }}
-                        </a-typography-text>
-                      </a-descriptions-item>
-                      <a-descriptions-item label="MCP 配置路径">
-                        <a-typography-text
-                          :copyable="systemInfo.mcpPath !== '未找到'"
-                          code
-                        >
-                          {{ systemInfo.mcpPath }}
-                        </a-typography-text>
-                      </a-descriptions-item>
-                      <a-descriptions-item label="规则文件路径">
-                        <a-typography-text
-                          :copyable="systemInfo.rulesPath !== '未找到'"
-                          code
-                        >
-                          {{ systemInfo.rulesPath }}
-                        </a-typography-text>
-                      </a-descriptions-item>
-                      <a-descriptions-item label="CLI 工具路径">
-                        <a-typography-text
-                          :copyable="systemInfo.cliPath !== '未找到'"
-                          code
-                        >
-                          {{ systemInfo.cliPath }}
-                        </a-typography-text>
-                      </a-descriptions-item>
-                    </a-descriptions>
-                  </div>
-                </a-space>
-              </div>
-            </a-card>
-          </div>
-        </a-tab-pane>
+    <a-tabs v-model:activeKey="activeTab" class="main-tabs">
+      <a-tab-pane v-for="item in tabItems" :key="item.key" :tab="item.tab">
+        <BasicInfo
+          v-if="item.key === 'basic'"
+          :cursor-status="{ installed: true }"
+          :system-info="systemInfo"
+          :cursor-user-info="userInfo"
+          :loading="loading"
+          @check-status="checkSystemStatus"
+          @show-custom-path="showCustomPathModal"
+          @load-user-info="loadUserInfo"
+        />
 
-        <!-- 规则管理 Tab -->
-        <a-tab-pane key="rules" tab="规则管理">
-          <div class="tab-content">
-            <a-card title="Cursor 规则管理" size="small" class="section-card">
-              <div class="rules-section">
-                <a-space direction="vertical" style="width: 100%">
-                  <div class="rules-header">
-                    <a-space>
-                      <a-button @click="loadSettings" :loading="loading.load">
-                        <template #icon><ReloadOutlined /></template>
-                        刷新规则
-                      </a-button>
-                      <a-button
-                        type="primary"
-                        @click="saveCursorRules"
-                        :loading="loading.save"
-                      >
-                        <template #icon><SaveOutlined /></template>
-                        保存规则
-                      </a-button>
-                      <a-button
-                        danger
-                        @click="clearCursorRules"
-                        :loading="loading.clear"
-                      >
-                        <template #icon><DeleteOutlined /></template>
-                        清空规则
-                      </a-button>
-                    </a-space>
-                  </div>
+        <RulesManagement
+          v-else-if="item.key === 'rules'"
+          :user-info="userInfo"
+          :loading="loading"
+          :cursor-rules="cursorRules"
+          @load-rules="loadRules"
+          @save-rules="saveRules"
+          @clear-rules="clearRules"
+          @update:cursor-rules="cursorRules = $event"
+        />
 
-                  <div class="rules-editor">
-                    <a-textarea
-                      v-model:value="cursorRules"
-                      placeholder="在此编辑 .cursorrules 文件内容..."
-                      :rows="15"
-                      show-count
-                      :maxlength="10000"
-                    />
-                    <div class="rules-help">
-                      <a-alert
-                        message="提示"
-                        description="这里编辑的是 Cursor settings.json 中的用户规则配置，用于定义全局的编码规则和约定。这些规则会在 Cursor 的所有项目中生效。"
-                        type="info"
-                        show-icon
-                        closable
-                      />
-                    </div>
-                  </div>
-                </a-space>
-              </div>
-            </a-card>
-          </div>
-        </a-tab-pane>
+        <McpManagement
+          v-else-if="item.key === 'mcp'"
+          :user-info="userInfo"
+          :loading="loading"
+          :mcp-servers="mcpServers"
+          @load-servers="loadMcpServers"
+          @show-add-modal="showAddMcpModal"
+          @remove-server="removeMcpServer"
+        />
 
-        <!-- MCP 管理 Tab -->
-        <a-tab-pane key="mcp" tab="MCP 管理">
-          <div class="tab-content">
-            <a-card title="MCP 服务器管理" size="small" class="section-card">
-              <div class="mcp-section">
-                <a-space direction="vertical" style="width: 100%">
-                  <div class="mcp-header">
-                    <a-space>
-                      <a-button @click="loadMcpServers" :loading="loading.mcp">
-                        <template #icon><ReloadOutlined /></template>
-                        刷新服务器
-                      </a-button>
-                      <a-button type="primary" @click="showAddMcpModal">
-                        <template #icon><PlusOutlined /></template>
-                        添加服务器
-                      </a-button>
-                    </a-space>
-                  </div>
+        <CloudSync
+          v-else-if="item.key === 'sync'"
+          :user-info="userInfo"
+          :sync-info="syncInfo"
+          :sync-logs="syncLogs"
+          :loading="loading"
+          @sync-data="handleSyncData"
+          @toggle-auto-sync="toggleAutoSync"
+          @login-user="handleLoginUser"
+          @logout-user="handleLogoutUser"
+          @sync-all-data="handleSyncAllData"
+          @sync-rules-to-cloud="handleSyncRulesToCloud"
+          @sync-rules-from-cloud="handleSyncRulesFromCloud"
+          @sync-mcp-to-cloud="handleSyncMcpToCloud"
+          @sync-mcp-from-cloud="handleSyncMcpFromCloud"
+          @clear-sync-logs="handleClearSyncLogs"
+        />
 
-                  <div class="mcp-list">
-                    <a-table
-                      :dataSource="mcpServers"
-                      :columns="mcpColumns"
-                      :pagination="false"
-                      size="small"
-                      :scroll="{ x: 'max-content', y: 400 }"
-                    >
-                      <template #bodyCell="{ column, record }">
-                        <template v-if="column.key === 'command'">
-                          <a-typography-text code>
-                            {{ record.command }}
-                          </a-typography-text>
-                        </template>
-                        <template v-else-if="column.key === 'args'">
-                          <a-tag
-                            v-for="arg in record.args"
-                            :key="arg"
-                            size="small"
-                          >
-                            {{ arg }}
-                          </a-tag>
-                        </template>
-                        <template v-else-if="column.key === 'env'">
-                          <a-tag
-                            v-for="(value, key) in record.env"
-                            :key="key"
-                            size="small"
-                          >
-                            {{ key }}={{ value }}
-                          </a-tag>
-                        </template>
-                        <template v-else-if="column.key === 'actions'">
-                          <a-space>
-                            <a-button
-                              size="small"
-                              danger
-                              @click="removeMcpServer(record.name)"
-                            >
-                              删除
-                            </a-button>
-                          </a-space>
-                        </template>
-                      </template>
-                    </a-table>
-                  </div>
-                </a-space>
-              </div>
-            </a-card>
-          </div>
-        </a-tab-pane>
+        <QuickChat
+          v-else-if="item.key === 'chat'"
+          :user-info="userInfo"
+          :loading="loading"
+          :chat-message="''"
+        />
 
-        <!-- 快速聊天 Tab -->
-        <a-tab-pane key="chat" tab="快速聊天">
-          <div class="tab-content">
-            <a-card title="Cursor Chat 集成" size="small" class="section-card">
-              <div class="chat-section">
-                <a-space direction="vertical" style="width: 100%">
-                  <div class="chat-input">
-                    <a-textarea
-                      v-model:value="chatMessage"
-                      placeholder="输入要发送到 Cursor Chat 的消息..."
-                      :rows="8"
-                      show-count
-                      :maxlength="2000"
-                    />
-                  </div>
+        <ServerTest
+          v-else-if="item.key === 'test'"
+          :test-logs="testLogs"
+          :loading="loading"
+          @test-server="testServerConnection"
+        />
+      </a-tab-pane>
+    </a-tabs>
 
-                  <div class="chat-actions">
-                    <a-space>
-                      <a-button
-                        type="primary"
-                        @click="sendToCursorChat"
-                        :loading="loading.chat"
-                      >
-                        <template #icon><MessageOutlined /></template>
-                        发送到 Chat
-                      </a-button>
-                      <a-button
-                        @click="openCursorChat"
-                        :loading="loading.openChat"
-                      >
-                        <template #icon><CommentOutlined /></template>
-                        打开 Chat
-                      </a-button>
-                      <a-button
-                        @click="openCursor"
-                        :loading="loading.openCursor"
-                      >
-                        <template #icon><AppstoreOutlined /></template>
-                        打开 Cursor
-                      </a-button>
-                    </a-space>
-                  </div>
-
-                  <div class="chat-help">
-                    <a-alert
-                      message="聊天功能说明"
-                      description="点击'发送到 Chat'会尝试自动打开 Cursor 聊天界面并发送消息。如果自动发送失败，消息会被复制到剪贴板，您可以手动粘贴到聊天界面。"
-                      type="info"
-                      show-icon
-                      closable
-                    />
-                  </div>
-                </a-space>
-              </div>
-            </a-card>
-          </div>
-        </a-tab-pane>
-      </a-tabs>
-    </a-card>
-
-    <!-- 添加 MCP 服务器模态框 -->
+    <!-- 自定义路径模态框 -->
     <a-modal
-      v-model:open="mcpModalVisible"
-      title="添加 MCP 服务器"
-      @ok="addMcpServer"
-      @cancel="cancelAddMcp"
-      :confirmLoading="loading.addMcp"
+      v-model:open="showPathModal"
+      title="设置自定义路径"
+      @ok="handleSetCustomPath"
+      @cancel="showPathModal = false"
     >
-      <a-form :model="newMcpServer" layout="vertical">
-        <a-form-item label="服务器名称" required>
+      <a-form layout="vertical">
+        <a-form-item label="Cursor 安装路径">
           <a-input
-            v-model:value="newMcpServer.name"
-            placeholder="例如: filesystem"
+            v-model:value="customPath.cursor"
+            placeholder="请输入 Cursor 安装路径"
           />
         </a-form-item>
-
-        <a-form-item label="连接类型" required>
-          <a-radio-group v-model:value="newMcpServer.type">
-            <a-radio value="command">命令行</a-radio>
-            <a-radio value="url">URL</a-radio>
-          </a-radio-group>
-        </a-form-item>
-
-        <template v-if="newMcpServer.type === 'command'">
-          <a-form-item label="命令" required>
-            <a-input
-              v-model:value="newMcpServer.command"
-              placeholder="例如: npx"
-            />
-          </a-form-item>
-
-          <a-form-item label="参数">
-            <a-textarea
-              v-model:value="newMcpServer.argsText"
-              placeholder="每行一个参数，例如:&#10;-y&#10;@modelcontextprotocol/server-filesystem&#10;/path/to/directory"
-              :rows="4"
-            />
-          </a-form-item>
-        </template>
-
-        <template v-else>
-          <a-form-item label="服务器 URL" required>
-            <a-input
-              v-model:value="newMcpServer.url"
-              placeholder="例如: http://localhost:3000"
-            />
-          </a-form-item>
-        </template>
-
-        <a-form-item label="环境变量">
-          <a-textarea
-            v-model:value="newMcpServer.envText"
-            placeholder="每行一个环境变量，格式: KEY=VALUE&#10;例如:&#10;API_KEY=your-key-here&#10;DEBUG=true"
-            :rows="3"
+        <a-form-item label="配置文件路径">
+          <a-input
+            v-model:value="customPath.config"
+            placeholder="请输入配置文件路径"
           />
         </a-form-item>
       </a-form>
     </a-modal>
 
-    <!-- 自定义安装路径模态框 -->
+    <!-- 添加MCP服务器模态框 -->
     <a-modal
-      v-model:open="customPathModalVisible"
-      title="设置 Cursor 安装路径"
-      @ok="setCustomInstallPath"
-      @cancel="cancelCustomPath"
-      :confirmLoading="loading.customPath"
-      width="800px"
+      v-model:open="showMcpModal"
+      title="添加MCP服务器"
+      @ok="handleAddMcpServer"
+      @cancel="showMcpModal = false"
     >
-      <a-space direction="vertical" style="width: 100%">
-        <a-alert
-          message="找不到 Cursor 安装路径？"
-          description="请根据您的操作系统，按照下面的指导找到 Cursor 的安装路径。"
-          type="info"
-          show-icon
-        />
-
-        <a-collapse>
-          <a-collapse-panel key="macos" header="🍎 macOS 用户">
-            <div class="guide-content">
-              <h4>常见安装路径：</h4>
-              <ul>
-                <li><code>/Applications/Cursor.app</code></li>
-                <li><code>~/Applications/Cursor.app</code></li>
-              </ul>
-
-              <h4>如何找到安装路径：</h4>
-              <ol>
-                <li>在 Finder 中找到 Cursor 应用</li>
-                <li>右键点击 Cursor 应用，选择"显示简介"</li>
-                <li>在"位置"一栏中可以看到完整路径</li>
-                <li>
-                  或者在终端中运行：
-                  <code>mdfind "kMDItemDisplayName == 'Cursor'"</code>
-                </li>
-              </ol>
-            </div>
-          </a-collapse-panel>
-
-          <a-collapse-panel key="windows" header="🪟 Windows 用户">
-            <div class="guide-content">
-              <h4>常见安装路径：</h4>
-              <ul>
-                <li>
-                  <code>C:\Users\[用户名]\AppData\Local\Programs\cursor</code>
-                </li>
-                <li><code>C:\Program Files\Cursor</code></li>
-                <li><code>C:\Program Files (x86)\Cursor</code></li>
-              </ul>
-
-              <h4>如何找到安装路径：</h4>
-              <ol>
-                <li>右键点击桌面上的 Cursor 图标</li>
-                <li>选择"属性"</li>
-                <li>在"目标"或"起始位置"中可以看到安装路径</li>
-                <li>
-                  或者在命令提示符中运行：
-                  <code>where cursor</code>
-                </li>
-              </ol>
-            </div>
-          </a-collapse-panel>
-
-          <a-collapse-panel key="linux" header="🐧 Linux 用户">
-            <div class="guide-content">
-              <h4>常见安装路径：</h4>
-              <ul>
-                <li><code>/opt/cursor</code></li>
-                <li><code>~/.local/bin/cursor</code></li>
-                <li><code>/usr/local/bin/cursor</code></li>
-              </ul>
-
-              <h4>如何找到安装路径：</h4>
-              <ol>
-                <li>
-                  在终端中运行：
-                  <code>which cursor</code>
-                </li>
-                <li>
-                  或者运行：
-                  <code>whereis cursor</code>
-                </li>
-                <li>如果是 AppImage，查看下载目录</li>
-              </ol>
-            </div>
-          </a-collapse-panel>
-        </a-collapse>
-
-        <a-divider />
-
-        <a-form layout="vertical">
-          <a-form-item label="Cursor 安装路径" required>
-            <a-input
-              v-model:value="customInstallPath"
-              placeholder="请输入 Cursor 的完整安装路径..."
-              size="large"
-            />
-            <div class="path-tips">
-              <a-typography-text type="secondary">
-                💡 提示：如果不确定是否安装了 Cursor，可以在终端中运行
-                <code>cursor --version</code>
-                来验证
-              </a-typography-text>
-            </div>
-          </a-form-item>
-        </a-form>
-      </a-space>
+      <a-form layout="vertical">
+        <a-form-item label="服务器名称" required>
+          <a-input
+            v-model:value="newMcpServer.name"
+            placeholder="请输入服务器名称"
+          />
+        </a-form-item>
+        <a-form-item label="命令" required>
+          <a-input
+            v-model:value="newMcpServer.command"
+            placeholder="请输入执行命令"
+          />
+        </a-form-item>
+        <a-form-item label="参数">
+          <a-input
+            v-model:value="newMcpServer.argsText"
+            placeholder="请输入参数，用空格分隔"
+          />
+        </a-form-item>
+        <a-form-item label="环境变量">
+          <a-textarea
+            v-model:value="newMcpServer.envText"
+            placeholder="请输入环境变量，格式：KEY=VALUE，每行一个"
+            :rows="3"
+          />
+        </a-form-item>
+      </a-form>
     </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import {
-  AppstoreOutlined,
-  CommentOutlined,
-  DeleteOutlined,
-  MessageOutlined,
-  PlusOutlined,
-  ReloadOutlined,
-  SaveOutlined,
-} from "@ant-design/icons-vue";
-import { message } from "ant-design-vue";
 import { onMounted, reactive, ref } from "vue";
 
+import {
+  authService,
+  mcpService,
+  userService,
+} from "../../services/pluginService";
+import { testServerHealth } from "../../utils/serverHealthCheck";
 import { sendTaskToVscode } from "../../utils/vscodeUtils";
-
-// 类型定义
-interface McpServerConfig {
-  name: string;
-  command?: string;
-  args?: string[];
-  url?: string;
-  env?: Record<string, string>;
-  key: string;
-}
-
-interface NewMcpServerForm {
-  name: string;
-  type: "command" | "url";
-  command: string;
-  url: string;
-  argsText: string;
-  envText: string;
-}
+import BasicInfo from "./components/BasicInfo.vue";
+import CloudSync from "./components/CloudSync.vue";
+import McpManagement from "./components/McpManagement.vue";
+import QuickChat from "./components/QuickChat.vue";
+import RulesManagement from "./components/RulesManagement.vue";
+import ServerTest from "./components/ServerTest.vue";
+import {
+  createInitialState,
+  createLogAdder,
+  createTabItems,
+  handleSystemCheck,
+  handleUserInfoLoad,
+} from "./utils/cursorUtils";
 
 // 响应式数据
 const activeTab = ref("basic");
+const showPathModal = ref(false);
+const showMcpModal = ref(false);
+const customPath = reactive({
+  cursor: "",
+  config: "",
+});
+
+// 新增：规则和MCP数据
 const cursorRules = ref("");
-const chatMessage = ref("");
-const mcpServers = ref<McpServerConfig[]>([]);
-const mcpModalVisible = ref(false);
-const customPathModalVisible = ref(false);
-const customInstallPath = ref("");
 
-const cursorStatus = reactive({
-  installed: false,
-});
+interface McpServer {
+  name: string;
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+}
 
-const systemInfo = reactive({
-  platform: "",
-  configPath: "",
-  mcpPath: "",
-  rulesPath: "",
-  cliPath: "",
-});
+interface McpConfig {
+  command: string;
+  args?: string[];
+  env?: Record<string, string>;
+}
 
-const loading = reactive({
-  status: false,
-  load: false,
-  save: false,
-  clear: false,
-  mcp: false,
-  chat: false,
-  openChat: false,
-  openCursor: false,
-  addMcp: false,
-  customPath: false,
-});
+// 添加API响应类型定义
+interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  message?: string;
+}
 
-const newMcpServer = reactive<NewMcpServerForm>({
+interface AuthData {
+  token: string;
+  user?: Record<string, unknown>;
+}
+
+interface UserRulesData {
+  rules: Array<{
+    id: number;
+    ruleName: string;
+    ruleContent: string;
+    sortOrder: number;
+  }>;
+}
+
+interface McpData {
+  mcps: Array<{
+    id: number;
+    serverName: string;
+    command: string;
+    args?: string[];
+    env?: Record<string, string>;
+    sortOrder: number;
+  }>;
+}
+
+const mcpServers = ref<McpServer[]>([]);
+const newMcpServer = reactive({
   name: "",
-  type: "command",
   command: "",
-  url: "",
   argsText: "",
   envText: "",
 });
 
-// MCP 表格列定义
-const mcpColumns = [
-  {
-    title: "名称",
-    dataIndex: "name",
-    key: "name",
-    width: 120,
-    fixed: "left",
-    ellipsis: true,
-  },
-  {
-    title: "命令",
-    dataIndex: "command",
-    key: "command",
-    width: 150,
-    ellipsis: true,
-  },
-  {
-    title: "参数",
-    dataIndex: "args",
-    key: "args",
-    width: 200,
-    ellipsis: true,
-  },
-  {
-    title: "环境变量",
-    dataIndex: "env",
-    key: "env",
-    width: 180,
-    ellipsis: true,
-  },
-  {
-    title: "操作",
-    key: "actions",
-    width: 100,
-    fixed: "right",
-  },
-];
+// 使用工具函数创建初始状态
+const state = createInitialState();
+const systemInfo = reactive(state.systemInfo);
+const userInfo = reactive(state.userInfo);
+const syncInfo = reactive(state.syncInfo);
+const loading = reactive(state.loading);
+const syncLogs = ref(state.syncLogs);
+const testLogs = ref(state.testLogs);
 
-// 获取平台名称
-const getPlatformName = (platform: string): string => {
-  switch (platform) {
-    case "win32":
-      return "Windows";
-    case "darwin":
-      return "macOS";
-    case "linux":
-      return "Linux";
-    default:
-      return platform;
-  }
+// 标签页配置
+const tabItems = createTabItems();
+
+// 日志添加函数
+const addSyncLog = createLogAdder(syncLogs, 50);
+const addTestLog = createLogAdder(testLogs, 100);
+
+// 系统状态检查
+const checkSystemStatus = () => {
+  handleSystemCheck(loading, systemInfo, addTestLog);
 };
 
-// 检查 Cursor 状态
-const checkCursorStatus = async () => {
-  loading.status = true;
+// 用户信息加载
+const loadUserInfo = () => {
+  handleUserInfoLoad(loading, userInfo, addTestLog);
+};
+
+// 显示自定义路径模态框
+const showCustomPathModal = () => {
+  customPath.cursor = systemInfo.cursorPath || "";
+  customPath.config = systemInfo.configPath || "";
+  showPathModal.value = true;
+};
+
+// 设置自定义路径
+const handleSetCustomPath = async () => {
   try {
-    const result = await sendTaskToVscode("isCursorInstalled", {});
-    cursorStatus.installed = result.success && result.data;
-
-    if (cursorStatus.installed) {
-      const systemResult = await sendTaskToVscode("getSystemInfo", {});
-      if (systemResult.success) {
-        Object.assign(systemInfo, systemResult.data);
-      }
-    }
-
-    message.success(
-      `Cursor 状态: ${cursorStatus.installed ? "已安装" : "未安装"}`,
-    );
+    await sendTaskToVscode("setCustomPath", customPath);
+    systemInfo.cursorPath = customPath.cursor;
+    systemInfo.configPath = customPath.config;
+    showPathModal.value = false;
+    addTestLog("路径设置成功", "success");
   } catch (error) {
-    console.error("检查 Cursor 状态失败:", error);
-    message.error("检查 Cursor 状态失败");
-  } finally {
-    loading.status = false;
+    addTestLog(`路径设置失败: ${error}`, "error");
   }
 };
 
-// 加载设置
-const loadSettings = async () => {
+// 新增：规则管理功能
+const loadRules = async () => {
   loading.load = true;
+  addTestLog("开始加载规则...", "info");
+
   try {
-    // 获取用户规则（从 Cursor settings.json 中）
-    const rulesResult = await sendTaskToVscode("getUserRules", {});
-    if (rulesResult.success) {
-      cursorRules.value = rulesResult.data || "";
-      message.success("用户规则加载成功");
-    } else {
-      message.error(rulesResult.error || "加载用户规则失败");
-    }
+    const result = await sendTaskToVscode("getUserRules");
+    cursorRules.value = result || "";
+    addTestLog("规则加载成功", "success");
   } catch (error) {
-    console.error("加载用户规则失败:", error);
-    message.error("加载用户规则失败");
+    addTestLog(`规则加载失败: ${error}`, "error");
   } finally {
     loading.load = false;
   }
 };
 
-// 保存 Cursor 规则
-const saveCursorRules = async () => {
+const saveRules = async () => {
   loading.save = true;
-  try {
-    const result = await sendTaskToVscode("updateUserRules", {
-      rules: cursorRules.value,
-    });
+  addTestLog("开始保存规则...", "info");
 
-    if (result.success) {
-      message.success("用户规则保存成功");
-    } else {
-      message.error(result.error || "保存用户规则失败");
-    }
+  try {
+    await sendTaskToVscode("updateUserRules", { rules: cursorRules.value });
+    addTestLog("规则保存成功", "success");
   } catch (error) {
-    console.error("保存用户规则失败:", error);
-    message.error("保存用户规则失败");
+    addTestLog(`规则保存失败: ${error}`, "error");
   } finally {
     loading.save = false;
   }
 };
 
-// 清空 Cursor 规则
-const clearCursorRules = async () => {
+const clearRules = async () => {
   loading.clear = true;
+  addTestLog("开始清空规则...", "info");
+
   try {
     cursorRules.value = "";
-    const result = await sendTaskToVscode("updateUserRules", {
-      rules: "",
-    });
-
-    if (result.success) {
-      message.success("用户规则已清空");
-    } else {
-      message.error(result.error || "清空用户规则失败");
-    }
+    await sendTaskToVscode("updateUserRules", { rules: "" });
+    addTestLog("规则清空成功", "success");
   } catch (error) {
-    console.error("清空用户规则失败:", error);
-    message.error("清空用户规则失败");
+    addTestLog(`规则清空失败: ${error}`, "error");
   } finally {
     loading.clear = false;
   }
 };
 
-// 加载 MCP 服务器
-const loadMcpServers = async () => {
-  loading.mcp = true;
+/**
+ * 同步MCP服务器到数据库
+ */
+const syncMcpServersToDatabase = async () => {
+  // 检查云端登录状态
+  const cloudToken = localStorage.getItem("diflow_cloud_token");
+  const cloudEmail = localStorage.getItem("diflow_cloud_email");
+
+  if (!cloudToken || !cloudEmail) {
+    addTestLog("用户未登录云端，跳过数据库同步", "info");
+    return;
+  }
+
   try {
-    const result = await sendTaskToVscode("getMcpServers", {});
+    // 将当前MCP服务器列表转换为数据库格式
+    const mcpsForDatabase = mcpServers.value.map((server, index) => ({
+      serverName: server.name,
+      command: server.command,
+      args: server.args || [],
+      env: server.env || {},
+      sortOrder: index + 1,
+    }));
+
+    const result = await mcpService.saveMcpServers(
+      cloudEmail,
+      mcpsForDatabase,
+      cloudToken,
+    );
+
     if (result.success) {
-      mcpServers.value = Object.entries(result.data || {}).map(
-        ([name, config]: [string, Omit<McpServerConfig, "name" | "key">]) => ({
-          key: name,
-          name,
-          ...config,
-        }),
-      );
-      message.success("MCP 服务器列表加载成功");
+      addTestLog("MCP配置已同步到数据库", "success");
     } else {
-      message.error(result.error || "加载 MCP 服务器失败");
+      const errorMsg = "message" in result ? result.message : "未知错误";
+      addTestLog(`数据库同步失败: ${errorMsg}`, "error");
     }
   } catch (error) {
-    console.error("加载 MCP 服务器失败:", error);
-    message.error("加载 MCP 服务器失败");
+    addTestLog(`数据库同步异常: ${error}`, "error");
+  }
+};
+
+/**
+ * 从数据库加载MCP服务器配置
+ */
+const loadMcpServersFromDatabase = async (): Promise<McpServer[]> => {
+  // 检查云端登录状态
+  const cloudToken = localStorage.getItem("diflow_cloud_token");
+  const cloudEmail = localStorage.getItem("diflow_cloud_email");
+
+  if (!cloudToken || !cloudEmail) {
+    addTestLog("用户未登录云端，跳过数据库加载", "info");
+    return [];
+  }
+
+  try {
+    const result = await mcpService.getMcpServers(cloudEmail, cloudToken);
+    if (result.success && "data" in result && result.data) {
+      const mcpData = result.data as {
+        mcps?: Array<{
+          serverName: string;
+          command: string;
+          args?: string[];
+          env?: Record<string, string>;
+        }>;
+      };
+
+      if (mcpData.mcps) {
+        addTestLog("从数据库加载MCP配置成功", "success");
+        return mcpData.mcps.map(
+          (mcp): McpServer => ({
+            name: mcp.serverName,
+            command: mcp.command,
+            args: mcp.args ?? [],
+            env: mcp.env ?? {},
+          }),
+        );
+      }
+    }
+    addTestLog("数据库中无MCP配置", "info");
+    return [];
+  } catch (error) {
+    addTestLog(`从数据库加载MCP配置失败: ${error}`, "error");
+    return [];
+  }
+};
+
+// 修改：MCP管理功能
+const loadMcpServers = async () => {
+  loading.mcp = true;
+  addTestLog("开始加载MCP服务器...", "info");
+
+  try {
+    // 1. 从本地配置文件加载
+    const localResult = await sendTaskToVscode("getMcpServers");
+    let localServers: McpServer[] = [];
+
+    if (localResult && typeof localResult === "object") {
+      localServers = Object.entries(localResult).map(
+        ([name, config]: [string, McpConfig]): McpServer => ({
+          name,
+          command: config.command,
+          args: config.args ?? [],
+          env: config.env ?? {},
+        }),
+      );
+    }
+
+    // 2. 从数据库加载（如果用户已登录）
+    const databaseServers = await loadMcpServersFromDatabase();
+
+    // 3. 合并本地和数据库配置（优先使用本地配置）
+    const serverMap = new Map<string, McpServer>();
+
+    // 先添加数据库配置
+    databaseServers.forEach((server) => {
+      serverMap.set(server.name, server);
+    });
+
+    // 再添加本地配置（会覆盖同名的数据库配置）
+    localServers.forEach((server) => {
+      serverMap.set(server.name, server);
+    });
+
+    mcpServers.value = Array.from(serverMap.values());
+    addTestLog(
+      `MCP服务器加载成功，共${mcpServers.value.length}个服务器`,
+      "success",
+    );
+  } catch (error) {
+    addTestLog(`MCP服务器加载失败: ${error}`, "error");
   } finally {
     loading.mcp = false;
   }
 };
 
-// 显示添加 MCP 模态框
 const showAddMcpModal = () => {
-  mcpModalVisible.value = true;
   // 重置表单
-  Object.assign(newMcpServer, {
-    name: "",
-    type: "command",
-    command: "",
-    url: "",
-    argsText: "",
-    envText: "",
-  });
+  newMcpServer.name = "";
+  newMcpServer.command = "";
+  newMcpServer.argsText = "";
+  newMcpServer.envText = "";
+  showMcpModal.value = true;
 };
 
-// 添加 MCP 服务器
-const addMcpServer = async () => {
-  if (!newMcpServer.name) {
-    message.error("请输入服务器名称");
+const handleAddMcpServer = async () => {
+  if (!newMcpServer.name || !newMcpServer.command) {
+    addTestLog("请填写服务器名称和命令", "error");
     return;
   }
 
-  loading.addMcp = true;
   try {
-    const config: Partial<McpServerConfig> = {};
+    // 解析参数和环境变量
+    const args = newMcpServer.argsText
+      ? newMcpServer.argsText.split(/\s+/)
+      : [];
+    const env: Record<string, string> = {};
 
-    if (newMcpServer.type === "command") {
-      if (!newMcpServer.command) {
-        message.error("请输入命令");
-        return;
-      }
-      config.command = newMcpServer.command;
-      config.args = newMcpServer.argsText
-        .split("\n")
-        .map((arg) => arg.trim())
-        .filter((arg) => arg);
-    } else {
-      if (!newMcpServer.url) {
-        message.error("请输入服务器 URL");
-        return;
-      }
-      config.url = newMcpServer.url;
-    }
-
-    // 解析环境变量
-    config.env = {};
     if (newMcpServer.envText) {
-      newMcpServer.envText
-        .split("\n")
-        .map((line) => line.trim())
-        .filter((line) => line && line.includes("="))
-        .forEach((line) => {
-          const [key, ...valueParts] = line.split("=");
-          if (config.env) {
-            config.env[key.trim()] = valueParts.join("=").trim();
-          }
-        });
+      newMcpServer.envText.split("\n").forEach((line) => {
+        const [key, ...valueParts] = line.split("=");
+        if (key && valueParts.length > 0) {
+          env[key.trim()] = valueParts.join("=").trim();
+        }
+      });
     }
 
-    const result = await sendTaskToVscode("addMcpServer", {
+    const config = {
+      command: newMcpServer.command,
+      args,
+      env,
+    };
+
+    // 1. 更新本地配置文件
+    await sendTaskToVscode("addMcpServer", {
       name: newMcpServer.name,
       config,
     });
 
-    if (result.success) {
-      message.success("MCP 服务器添加成功");
-      mcpModalVisible.value = false;
-      await loadMcpServers();
-    } else {
-      message.error(result.error || "添加 MCP 服务器失败");
-    }
+    addTestLog("MCP服务器本地配置添加成功", "success");
+    showMcpModal.value = false;
+
+    // 2. 重新加载服务器列表
+    await loadMcpServers();
+
+    // 3. 同步到数据库
+    await syncMcpServersToDatabase();
   } catch (error) {
-    console.error("添加 MCP 服务器失败:", error);
-    message.error("添加 MCP 服务器失败");
-  } finally {
-    loading.addMcp = false;
+    addTestLog(`MCP服务器添加失败: ${error}`, "error");
   }
 };
 
-// 取消添加 MCP
-const cancelAddMcp = () => {
-  mcpModalVisible.value = false;
-};
-
-// 删除 MCP 服务器
 const removeMcpServer = async (name: string) => {
   try {
-    const result = await sendTaskToVscode("removeMcpServer", { name });
-    if (result.success) {
-      message.success("MCP 服务器删除成功");
-      await loadMcpServers();
-    } else {
-      message.error(result.error || "删除 MCP 服务器失败");
-    }
-  } catch (error) {
-    console.error("删除 MCP 服务器失败:", error);
-    message.error("删除 MCP 服务器失败");
-  }
-};
+    // 1. 从本地配置文件删除
+    await sendTaskToVscode("removeMcpServer", { name });
+    addTestLog(`MCP服务器 ${name} 本地配置删除成功`, "success");
 
-// 发送到 Cursor Chat
-const sendToCursorChat = async () => {
-  if (!chatMessage.value.trim()) {
-    message.error("请输入要发送的消息");
-    return;
-  }
-
-  loading.chat = true;
-  try {
-    const result = await sendTaskToVscode("openCursorChat", {
-      message: chatMessage.value,
-    });
-
-    if (result.success) {
-      message.success("消息已发送到 Cursor Chat");
-      chatMessage.value = "";
-    } else {
-      message.warning(result.error || "发送失败，消息可能已复制到剪贴板");
-    }
-  } catch (error) {
-    console.error("发送到 Cursor Chat 失败:", error);
-    message.error("发送到 Cursor Chat 失败");
-  } finally {
-    loading.chat = false;
-  }
-};
-
-// 打开 Cursor Chat
-const openCursorChat = async () => {
-  loading.openChat = true;
-  try {
-    const result = await sendTaskToVscode("openCursorChat", {});
-    if (result.success) {
-      message.success("Cursor Chat 已打开");
-    } else {
-      message.error(result.error || "打开 Cursor Chat 失败");
-    }
-  } catch (error) {
-    console.error("打开 Cursor Chat 失败:", error);
-    message.error("打开 Cursor Chat 失败");
-  } finally {
-    loading.openChat = false;
-  }
-};
-
-// 打开 Cursor
-const openCursor = async () => {
-  loading.openCursor = true;
-  try {
-    const result = await sendTaskToVscode("openCursor", {});
-    if (result.success) {
-      message.success("Cursor 已打开");
-    } else {
-      message.error(result.error || "打开 Cursor 失败");
-    }
-  } catch (error) {
-    console.error("打开 Cursor 失败:", error);
-    message.error("打开 Cursor 失败");
-  } finally {
-    loading.openCursor = false;
-  }
-};
-
-// 显示自定义安装路径模态框
-const showCustomPathModal = () => {
-  customPathModalVisible.value = true;
-  customInstallPath.value = "";
-};
-
-// 设置自定义安装路径
-const setCustomInstallPath = async () => {
-  if (!customInstallPath.value.trim()) {
-    message.error("请输入安装路径");
-    return;
-  }
-
-  loading.customPath = true;
-  try {
-    console.log("发送自定义路径:", customInstallPath.value.trim());
-
-    const result = await sendTaskToVscode("setCustomInstallPath", {
-      path: customInstallPath.value.trim(),
-    });
-
-    console.log("收到响应:", result);
-
-    // 修复响应处理逻辑
-    if (result && result.success) {
-      message.success("安装路径设置成功，正在重新检测...");
-      customPathModalVisible.value = false;
-
-      // 更新状态
-      if (result.isInstalled !== undefined) {
-        cursorStatus.installed = result.isInstalled;
-      }
-
-      // 更新系统信息
-      if (result.systemInfo) {
-        Object.assign(systemInfo, result.systemInfo);
-      }
-
-      // 重新检查状态以确保数据同步
-      await checkCursorStatus();
-    } else {
-      const errorMsg = result?.error || "设置安装路径失败";
-      message.error(errorMsg);
-    }
-  } catch (error) {
-    console.error("设置安装路径失败:", error);
-    message.error(
-      "设置安装路径失败: " +
-        (error instanceof Error ? error.message : String(error)),
-    );
-  } finally {
-    loading.customPath = false;
-  }
-};
-
-// 取消自定义路径设置
-const cancelCustomPath = () => {
-  customPathModalVisible.value = false;
-  customInstallPath.value = "";
-};
-
-// 组件挂载时初始化
-onMounted(async () => {
-  await checkCursorStatus();
-  if (cursorStatus.installed) {
-    await loadSettings();
+    // 2. 重新加载服务器列表
     await loadMcpServers();
+
+    // 3. 同步到数据库
+    await syncMcpServersToDatabase();
+  } catch (error) {
+    addTestLog(`MCP服务器删除失败: ${error}`, "error");
   }
+};
+
+// 数据同步
+const handleSyncData = async () => {
+  loading.sync = true;
+  addSyncLog("开始同步数据...", "info");
+
+  try {
+    // 检查用户登录状态
+    if (!userInfo.isLoggedIn) {
+      addSyncLog("用户未登录，执行本地同步", "info");
+      await sendTaskToVscode("syncData");
+      addSyncLog("本地数据同步成功", "success");
+    } else {
+      // 用户已登录，执行云端同步
+      await handleSyncAllData();
+    }
+
+    syncInfo.lastSyncTime = new Date();
+    syncInfo.syncStatus = "已同步";
+  } catch (error) {
+    addSyncLog(`同步错误: ${error}`, "error");
+  } finally {
+    loading.sync = false;
+  }
+};
+
+// 切换自动同步
+const toggleAutoSync = async () => {
+  try {
+    await sendTaskToVscode("toggleAutoSync", { enabled: !syncInfo.autoSync });
+    syncInfo.autoSync = !syncInfo.autoSync;
+    addTestLog(`自动同步已${syncInfo.autoSync ? "开启" : "关闭"}`, "success");
+  } catch (error) {
+    addTestLog(`自动同步设置失败: ${error}`, "error");
+  }
+};
+
+// 服务器连接测试
+const testServerConnection = async () => {
+  loading.test = true;
+  addTestLog("开始测试服务器连接...", "info");
+
+  try {
+    const result = await testServerHealth();
+
+    if (result.isHealthy) {
+      addTestLog(result.summary, "success");
+      result.results.forEach((r) => {
+        if (r.status === "success") {
+          addTestLog(
+            `✓ ${r.endpoint || "Unknown"}: ${r.statusCode}`,
+            "success",
+          );
+        } else {
+          addTestLog(`✗ ${r.endpoint || "Unknown"}: ${r.message}`, "error");
+        }
+      });
+    } else {
+      addTestLog(result.summary, "error");
+      result.results.forEach((r) => {
+        if (r.status === "error") {
+          addTestLog(`✗ ${r.endpoint || "Unknown"}: ${r.message}`, "error");
+        }
+      });
+    }
+  } catch (error) {
+    addTestLog(`服务器测试错误: ${error}`, "error");
+  } finally {
+    loading.test = false;
+  }
+};
+
+/**
+ * 检查云端登录状态
+ */
+const checkCloudLoginStatus = async () => {
+  try {
+    // 1. 从本地存储检查保存的云端认证信息
+    const savedToken = localStorage.getItem("diflow_cloud_token");
+    const savedEmail = localStorage.getItem("diflow_cloud_email");
+    const savedUsername = localStorage.getItem("diflow_cloud_username");
+    const savedCursorUserId = localStorage.getItem(
+      "diflow_cloud_cursor_user_id",
+    );
+    const savedAvatar = localStorage.getItem("diflow_cloud_avatar");
+
+    if (savedToken && savedEmail) {
+      // 如果有保存的云端认证信息，恢复登录状态
+      userInfo.email = savedEmail;
+      userInfo.username = savedUsername || "";
+      userInfo.cursorUserId = savedCursorUserId || "";
+      userInfo.avatar = savedAvatar || "";
+      userInfo.token = savedToken;
+      userInfo.isLoggedIn = true;
+
+      syncInfo.syncStatus = "已连接";
+      addSyncLog("检测到已保存的云端登录状态", "info");
+      return;
+    }
+
+    // 2. 如果没有保存的云端认证信息，检查是否可以自动登录
+    const cursorUserInfo = await sendTaskToVscode("getCursorUserInfo");
+
+    if (cursorUserInfo && cursorUserInfo.email && cursorUserInfo.isLoggedIn) {
+      addSyncLog("检测到 Cursor 用户信息，开始自动云端认证...", "info");
+
+      // 自动执行云端认证
+      try {
+        const authResult = await authService.loginOrCreateUser(
+          cursorUserInfo.email,
+          cursorUserInfo.username,
+          cursorUserInfo.cursorUserId,
+          cursorUserInfo.avatar,
+        );
+
+        if (authResult.success && "data" in authResult && authResult.data) {
+          // 更新用户信息
+          const authData = authResult.data as AuthData;
+          userInfo.email = cursorUserInfo.email;
+          userInfo.username = cursorUserInfo.username || "";
+          userInfo.cursorUserId = cursorUserInfo.cursorUserId || "";
+          userInfo.avatar = cursorUserInfo.avatar || "";
+          userInfo.token = authData.token;
+          userInfo.isLoggedIn = true;
+
+          // 保存云端认证信息到本地存储
+          localStorage.setItem("diflow_cloud_token", authData.token);
+          localStorage.setItem("diflow_cloud_email", cursorUserInfo.email);
+          localStorage.setItem(
+            "diflow_cloud_username",
+            cursorUserInfo.username || "",
+          );
+          localStorage.setItem(
+            "diflow_cloud_cursor_user_id",
+            cursorUserInfo.cursorUserId || "",
+          );
+          localStorage.setItem(
+            "diflow_cloud_avatar",
+            cursorUserInfo.avatar || "",
+          );
+
+          addSyncLog("自动云端认证成功", "success");
+          syncInfo.syncStatus = "已连接";
+          return;
+        } else {
+          const errorMsg =
+            "message" in authResult ? authResult.message : "自动认证失败";
+          addSyncLog(`自动云端认证失败: ${errorMsg}`, "error");
+        }
+      } catch (error) {
+        addSyncLog(`自动云端认证异常: ${error}`, "error");
+      }
+    } else {
+      addSyncLog("未检测到 Cursor 用户登录状态", "info");
+    }
+
+    // 保持未登录状态
+    userInfo.isLoggedIn = false;
+    syncInfo.syncStatus = "未连接";
+  } catch (error) {
+    addSyncLog(`检查登录状态失败: ${error}`, "error");
+    userInfo.isLoggedIn = false;
+    syncInfo.syncStatus = "未连接";
+  }
+};
+
+/**
+ * 用户登录处理
+ */
+const handleLoginUser = async () => {
+  loading.login = true;
+  addSyncLog("开始用户登录...", "info");
+
+  try {
+    // 1. 获取Cursor用户信息
+    const cursorUserInfo = await sendTaskToVscode("getCursorUserInfo");
+
+    if (!cursorUserInfo || !cursorUserInfo.email) {
+      addSyncLog("无法获取Cursor用户信息，请确保Cursor已登录", "error");
+      return;
+    }
+
+    // 2. 调用认证服务
+    const authResult = await authService.loginOrCreateUser(
+      cursorUserInfo.email,
+      cursorUserInfo.username,
+      cursorUserInfo.cursorUserId,
+      cursorUserInfo.avatar,
+    );
+
+    if (authResult.success && "data" in authResult && authResult.data) {
+      // 3. 更新用户信息
+      const authData = authResult.data as AuthData;
+      userInfo.email = cursorUserInfo.email;
+      userInfo.username = cursorUserInfo.username || "";
+      userInfo.cursorUserId = cursorUserInfo.cursorUserId || "";
+      userInfo.avatar = cursorUserInfo.avatar || "";
+      userInfo.token = authData.token;
+      userInfo.isLoggedIn = true;
+
+      // 4. 保存云端认证信息到本地存储
+      localStorage.setItem("diflow_cloud_token", authData.token);
+      localStorage.setItem("diflow_cloud_email", cursorUserInfo.email);
+      localStorage.setItem(
+        "diflow_cloud_username",
+        cursorUserInfo.username || "",
+      );
+      localStorage.setItem(
+        "diflow_cloud_cursor_user_id",
+        cursorUserInfo.cursorUserId || "",
+      );
+      localStorage.setItem("diflow_cloud_avatar", cursorUserInfo.avatar || "");
+
+      addSyncLog("用户登录成功", "success");
+      syncInfo.syncStatus = "已连接";
+    } else {
+      const errorMsg =
+        "message" in authResult ? authResult.message : "登录失败";
+      addSyncLog(`登录失败: ${errorMsg}`, "error");
+    }
+  } catch (error) {
+    addSyncLog(`登录异常: ${error}`, "error");
+  } finally {
+    loading.login = false;
+  }
+};
+
+/**
+ * 用户登出处理
+ */
+const handleLogoutUser = () => {
+  loading.logout = true;
+  addSyncLog("用户登出...", "info");
+
+  try {
+    // 清空用户信息
+    userInfo.email = "";
+    userInfo.username = "";
+    userInfo.cursorUserId = "";
+    userInfo.avatar = "";
+    userInfo.token = "";
+    userInfo.isLoggedIn = false;
+
+    // 清空本地存储的云端认证信息
+    localStorage.removeItem("diflow_cloud_token");
+    localStorage.removeItem("diflow_cloud_email");
+    localStorage.removeItem("diflow_cloud_username");
+    localStorage.removeItem("diflow_cloud_cursor_user_id");
+    localStorage.removeItem("diflow_cloud_avatar");
+
+    syncInfo.syncStatus = "未连接";
+    syncInfo.rulesStatus = "unknown";
+    syncInfo.mcpStatus = "unknown";
+
+    addSyncLog("用户登出成功", "success");
+  } catch (error) {
+    addSyncLog(`登出异常: ${error}`, "error");
+  } finally {
+    loading.logout = false;
+  }
+};
+
+/**
+ * 同步所有数据到云端
+ */
+const handleSyncAllData = async () => {
+  loading.syncAll = true;
+  addSyncLog("开始同步所有数据到云端...", "info");
+
+  try {
+    // 并行执行规则和MCP同步
+    await Promise.all([handleSyncRulesToCloud(), handleSyncMcpToCloud()]);
+
+    syncInfo.lastSyncTime = new Date();
+    syncInfo.syncStatus = "已同步";
+    addSyncLog("所有数据同步完成", "success");
+  } catch (error) {
+    addSyncLog(`同步失败: ${error}`, "error");
+  } finally {
+    loading.syncAll = false;
+  }
+};
+
+/**
+ * 同步规则到云端
+ */
+const handleSyncRulesToCloud = async () => {
+  // 检查云端登录状态 - 使用userInfo对象而不是localStorage
+  if (!userInfo.isLoggedIn || !userInfo.token || !userInfo.email) {
+    addSyncLog("用户未登录云端，无法同步规则", "error");
+    return;
+  }
+
+  loading.syncRules = true;
+  addSyncLog("开始同步规则到云端...", "info");
+
+  try {
+    // 1. 获取本地规则
+    const localRules = await sendTaskToVscode("getUserRules");
+
+    if (!localRules) {
+      addSyncLog("本地无规则内容", "info");
+      syncInfo.rulesStatus = "synced";
+      return;
+    }
+
+    // 2. 转换为服务端格式
+    const rulesForServer = [
+      {
+        ruleName: "cursor-rules",
+        ruleContent: localRules,
+        sortOrder: 1,
+      },
+    ];
+
+    // 3. 上传到服务端
+    const result = await userService.saveUserRules(
+      userInfo.email,
+      rulesForServer,
+      userInfo.token,
+    );
+
+    if (result.success) {
+      addSyncLog("规则同步到云端成功", "success");
+      syncInfo.rulesStatus = "synced";
+    } else {
+      const errorMsg = "message" in result ? result.message : "同步失败";
+      addSyncLog(`规则同步失败: ${errorMsg}`, "error");
+      syncInfo.rulesStatus = "error";
+    }
+  } catch (error) {
+    addSyncLog(`规则同步异常: ${error}`, "error");
+    syncInfo.rulesStatus = "error";
+  } finally {
+    loading.syncRules = false;
+  }
+};
+
+/**
+ * 从云端下载规则
+ */
+const handleSyncRulesFromCloud = async () => {
+  // 检查云端登录状态 - 使用userInfo对象而不是localStorage
+  if (!userInfo.isLoggedIn || !userInfo.token || !userInfo.email) {
+    addSyncLog("用户未登录云端，无法下载规则", "error");
+    return;
+  }
+
+  loading.syncRules = true;
+  addSyncLog("开始从云端下载规则...", "info");
+
+  try {
+    // 1. 从服务端获取规则
+    const result = await userService.getUserRules(
+      userInfo.email,
+      userInfo.token,
+    );
+
+    if (result.success && "data" in result && result.data) {
+      const responseData = result.data as { rules?: any[] };
+      const cloudRules = responseData.rules;
+
+      if (cloudRules && cloudRules.length > 0) {
+        // 2. 更新本地规则
+        const ruleContent = cloudRules[0].ruleContent;
+        await sendTaskToVscode("updateUserRules", { rules: ruleContent });
+
+        // 3. 更新界面显示
+        cursorRules.value = ruleContent;
+
+        addSyncLog("规则从云端下载成功", "success");
+        syncInfo.rulesStatus = "synced";
+      } else {
+        addTestLog("云端无规则数据", "info");
+        syncInfo.rulesStatus = "synced";
+      }
+    } else {
+      const errorMsg = "message" in result ? result.message : "下载失败";
+      addTestLog(`规则下载失败: ${errorMsg}`, "error");
+      syncInfo.rulesStatus = "error";
+    }
+  } catch (error) {
+    addTestLog(`规则下载异常: ${error}`, "error");
+    syncInfo.rulesStatus = "error";
+  } finally {
+    loading.syncRules = false;
+  }
+};
+
+/**
+ * 同步MCP配置到云端
+ */
+const handleSyncMcpToCloud = async () => {
+  // 检查云端登录状态 - 使用userInfo对象而不是localStorage
+  if (!userInfo.isLoggedIn || !userInfo.token || !userInfo.email) {
+    addSyncLog("用户未登录云端，无法同步MCP配置", "error");
+    return;
+  }
+
+  loading.syncMcp = true;
+  addSyncLog("开始同步MCP配置到云端...", "info");
+
+  try {
+    // 1. 获取本地MCP配置
+    const localMcpConfig = await sendTaskToVscode("getMcpServers");
+
+    if (!localMcpConfig || typeof localMcpConfig !== "object") {
+      addSyncLog("本地无MCP配置", "info");
+      syncInfo.mcpStatus = "synced";
+      return;
+    }
+
+    // 2. 转换为服务端格式
+    const mcpsForServer = Object.entries(localMcpConfig).map(
+      (
+        [name, config]: [string, McpConfig],
+        index,
+      ): {
+        serverName: string;
+        command: string;
+        args?: string[];
+        env?: Record<string, string>;
+        sortOrder: number;
+      } => ({
+        serverName: name,
+        command: config.command,
+        args: config.args ?? [],
+        env: config.env ?? {},
+        sortOrder: index + 1,
+      }),
+    );
+
+    // 3. 上传到服务端
+    const result = await mcpService.saveMcpServers(
+      userInfo.email,
+      mcpsForServer,
+      userInfo.token,
+    );
+
+    if (result.success) {
+      addSyncLog("MCP配置同步到云端成功", "success");
+      syncInfo.mcpStatus = "synced";
+    } else {
+      const errorMsg = "message" in result ? result.message : "同步失败";
+      addSyncLog(`MCP配置同步失败: ${errorMsg}`, "error");
+      syncInfo.mcpStatus = "error";
+    }
+  } catch (error) {
+    addSyncLog(`MCP配置同步异常: ${error}`, "error");
+    syncInfo.mcpStatus = "error";
+  } finally {
+    loading.syncMcp = false;
+  }
+};
+
+/**
+ * 从云端下载MCP配置
+ */
+const handleSyncMcpFromCloud = async () => {
+  // 检查云端登录状态 - 使用userInfo对象而不是localStorage
+  if (!userInfo.isLoggedIn || !userInfo.token || !userInfo.email) {
+    addSyncLog("用户未登录云端，无法下载MCP配置", "error");
+    return;
+  }
+
+  loading.syncMcp = true;
+  addSyncLog("开始从云端下载MCP配置...", "info");
+
+  try {
+    // 1. 从服务端获取MCP配置
+    const result = await mcpService.getMcpServers(
+      userInfo.email,
+      userInfo.token,
+    );
+
+    if (result.success && "data" in result && result.data) {
+      const responseData = result.data as { servers?: any[] };
+      const cloudMcps = responseData.servers;
+
+      if (cloudMcps && cloudMcps.length > 0) {
+        // 2. 转换为本地格式
+        const mcpConfig: Record<string, McpConfig> = {};
+        cloudMcps.forEach((mcp: any) => {
+          mcpConfig[mcp.serverName] = {
+            command: mcp.command,
+            args: mcp.args ?? [],
+            env: mcp.env ?? {},
+          };
+        });
+
+        // 3. 更新本地MCP配置
+        await sendTaskToVscode("updateMcpServers", { servers: mcpConfig });
+
+        // 4. 重新加载MCP服务器列表
+        await loadMcpServers();
+
+        addSyncLog("MCP配置从云端下载成功", "success");
+        syncInfo.mcpStatus = "synced";
+      } else {
+        addTestLog("云端无MCP配置数据", "info");
+        syncInfo.mcpStatus = "synced";
+      }
+    } else {
+      const errorMsg = "message" in result ? result.message : "下载失败";
+      addTestLog(`MCP配置下载失败: ${errorMsg}`, "error");
+      syncInfo.mcpStatus = "error";
+    }
+  } catch (error) {
+    addTestLog(`MCP配置下载异常: ${error}`, "error");
+    syncInfo.mcpStatus = "error";
+  } finally {
+    loading.syncMcp = false;
+  }
+};
+
+/**
+ * 清空同步日志
+ */
+const handleClearSyncLogs = () => {
+  syncLogs.value = [];
+  addSyncLog("同步日志已清空", "info");
+};
+
+// 初始化函数
+onMounted(async () => {
+  // 1. 检查系统状态
+  checkSystemStatus();
+
+  // 2. 加载用户信息
+  loadUserInfo();
+
+  // 3. 检查云端登录状态
+  await checkCloudLoginStatus();
+
+  // 4. 加载规则和MCP配置
+  await Promise.all([loadRules(), loadMcpServers()]);
 });
 </script>
 
-<style scoped lang="scss">
-@import "./index.scss";
+<style scoped>
+.cursor-page {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h2 {
+  margin: 0 0 8px 0;
+  color: #1f2937;
+}
+
+.page-header p {
+  margin: 0;
+  color: #6b7280;
+}
+
+.main-tabs {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* 添加标签页间距 */
+.main-tabs :deep(.ant-tabs-nav) {
+  padding: 0 20px;
+}
+
+.main-tabs :deep(.ant-tabs-tab) {
+  margin: 0 8px;
+  padding: 12px 16px;
+}
+
+.main-tabs :deep(.ant-tabs-tab-btn) {
+  font-weight: 500;
+}
+
+.main-tabs :deep(.ant-tabs-content-holder) {
+  padding: 20px;
+}
 </style>

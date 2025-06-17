@@ -1,0 +1,41 @@
+.cursor-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.page-header {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.page-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #1890ff;
+}
+
+.page-header p {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.main-tabs {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.main-tabs :deep(.ant-tabs-content-holder) {
+  padding: 16px;
+}
+
+.main-tabs :deep(.ant-tabs-tab) {
+  font-weight: 500;
+}
+
+.main-tabs :deep(.ant-tabs-tab-active) {
+  color: #1890ff;
+}

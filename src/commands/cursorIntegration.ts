@@ -1042,41 +1042,263 @@ export class CursorIntegration {
   }
 
   /**
-   * 获取 Cursor 用户信息
+   * 获取 Cursor 用户信息 - 改进版本，从 SQLite 数据库读取
    */
   async getCursorUserInfo(): Promise<{
     isLoggedIn: boolean;
     email?: string;
-    name?: string;
+    username?: string;
+    cursorUserId?: string;
+    avatar?: string;
+    membershipType?: string;
+    token?: string;
   }> {
     try {
+      console.log("=== 开始获取 Cursor 用户信息 ===");
+
+      // 重新检测配置路径
+      this.detectConfigPaths();
+
+      // 构建 SQLite 数据库路径
+      let dbPath: string;
+      if (this.platform === "darwin") {
+        dbPath = path.join(
+          os.homedir(),
+          "Library/Application Support/Cursor/User/globalStorage/state.vscdb"
+        );
+      } else if (this.platform === "win32") {
+        dbPath = path.join(
+          os.homedir(),
+          "AppData/Roaming/Cursor/User/globalStorage/state.vscdb"
+        );
+      } else {
+        // Linux
+        dbPath = path.join(
+          os.homedir(),
+          ".config/Cursor/User/globalStorage/state.vscdb"
+        );
+      }
+
+      console.log("SQLite 数据库路径:", dbPath);
+
+      // 检查数据库文件是否存在
+      if (!fs.existsSync(dbPath)) {
+        console.log("❌ Cursor SQLite 数据库不存在");
+        return { isLoggedIn: false };
+      }
+
+      console.log("✅ 找到 Cursor SQLite 数据库");
+
+      // 使用 sqlite3 命令行工具读取数据库
+      const { exec } = require("child_process");
+      const { promisify } = require("util");
+      const execAsync = promisify(exec);
+
+      try {
+        // 查询用户认证信息
+        const query = `
+          SELECT key, value 
+          FROM ItemTable 
+          WHERE key LIKE 'cursorAuth/%'
+        `;
+
+        const { stdout } = await execAsync(`sqlite3 "${dbPath}" "${query}"`, {
+          encoding: "utf8",
+        });
+
+        console.log("数据库查询结果:", stdout);
+
+        // 解析查询结果
+        const lines = stdout.trim().split("\n");
+        const authData: Record<string, string> = {};
+
+        for (const line of lines) {
+          if (line.includes("|")) {
+            const [key, value] = line.split("|", 2);
+            if (key && value) {
+              authData[key] = value;
+            }
+          }
+        }
+
+        console.log("解析的认证数据:", authData);
+
+        // 提取用户信息
+        const email = authData["cursorAuth/cachedEmail"];
+        const membershipType = authData["cursorAuth/stripeMembershipType"];
+        const accessToken = authData["cursorAuth/accessToken"];
+        const refreshToken = authData["cursorAuth/refreshToken"];
+
+        // 检查是否有有效的认证信息
+        const isLoggedIn = !!(email && (accessToken || refreshToken));
+
+        console.log("=== 最终检测结果 ===");
+        console.log("邮箱:", email || "未找到");
+        console.log("会员类型:", membershipType || "未找到");
+        console.log("登录状态:", isLoggedIn);
+
+        return {
+          isLoggedIn,
+          email,
+          username: email ? email.split("@")[0] : undefined, // 从邮箱提取用户名
+          cursorUserId: email, // 暂时使用邮箱作为用户ID
+          avatar: "", // 暂时为空
+          membershipType,
+          token: accessToken, // 使用访问令牌
+        };
+      } catch (dbError) {
+        console.error("❌ 数据库查询失败:", dbError);
+
+        // 如果 SQLite 查询失败，尝试备用方法：直接读取 settings.json
+        console.log("=== 尝试备用方法：读取 settings.json ===");
+        return await this.getCursorUserInfoFromSettings();
+      }
+    } catch (error) {
+      console.error("❌ 获取 Cursor 用户信息失败:", error);
+      return { isLoggedIn: false };
+    }
+  }
+
+  /**
+   * 从 settings.json 文件获取用户信息的备用方法
+   */
+  private async getCursorUserInfoFromSettings(): Promise<{
+    isLoggedIn: boolean;
+    email?: string;
+    username?: string;
+    cursorUserId?: string;
+    avatar?: string;
+    membershipType?: string;
+    token?: string;
+  }> {
+    try {
+      console.log("使用备用方法从 settings.json 读取用户信息");
+
       // 检查 Cursor 设置文件是否存在
       if (
         !this.configPaths.settingsPath ||
         !fs.existsSync(this.configPaths.settingsPath)
       ) {
+        console.log("❌ Cursor 设置文件不存在");
         return { isLoggedIn: false };
       }
+
+      console.log("✅ 找到 Cursor 设置文件");
 
       // 读取设置文件
       const settingsContent = fs.readFileSync(
         this.configPaths.settingsPath,
         "utf-8"
       );
+
+      console.log("设置文件内容长度:", settingsContent.length);
+
       const settings = JSON.parse(settingsContent);
 
-      // 检查用户信息
-      const email =
-        settings["cursor.account.email"] || settings["account.email"];
-      const name = settings["cursor.account.name"] || settings["account.name"];
+      // 定义所有可能包含用户信息的字段
+      const emailFields = [
+        "cursor.account.email",
+        "account.email",
+        "cursor.pro.email",
+        "cursor.subscription.email",
+        "cursor.session.email",
+        "cursor.login.email",
+        "cursor.user.email",
+        "user.email",
+        "email",
+        "userEmail",
+        "loginEmail",
+        "accountEmail",
+      ];
+
+      const nameFields = [
+        "cursor.account.name",
+        "account.name",
+        "cursor.pro.name",
+        "cursor.subscription.name",
+        "cursor.session.name",
+        "cursor.login.name",
+        "cursor.user.name",
+        "user.name",
+        "name",
+        "userName",
+        "loginName",
+        "accountName",
+        "displayName",
+      ];
+
+      let email: string | undefined;
+      let name: string | undefined;
+
+      // 1. 直接字段搜索
+      for (const field of emailFields) {
+        if (settings[field]) {
+          console.log(`✅ 在字段 '${field}' 找到邮箱:`, settings[field]);
+          email = settings[field];
+          break;
+        }
+      }
+
+      for (const field of nameFields) {
+        if (settings[field]) {
+          console.log(`✅ 在字段 '${field}' 找到用户名:`, settings[field]);
+          name = settings[field];
+          break;
+        }
+      }
+
+      // 2. 深度搜索 - 查找任何包含 @ 符号的字段（可能是邮箱）
+      if (!email) {
+        console.log("=== 开始深度搜索邮箱 ===");
+
+        const deepSearch = (
+          obj: any,
+          path: string = ""
+        ): string | undefined => {
+          for (const [key, value] of Object.entries(obj)) {
+            const currentPath = path ? `${path}.${key}` : key;
+
+            if (
+              typeof value === "string" &&
+              value.includes("@") &&
+              value.includes(".")
+            ) {
+              console.log(
+                `✅ 深度搜索在 '${currentPath}' 找到可能的邮箱:`,
+                value
+              );
+              return value;
+            } else if (
+              typeof value === "object" &&
+              value !== null &&
+              !Array.isArray(value)
+            ) {
+              const result = deepSearch(value, currentPath);
+              if (result) return result;
+            }
+          }
+          return undefined;
+        };
+
+        email = deepSearch(settings);
+      }
+
+      console.log("=== 备用方法检测结果 ===");
+      console.log("邮箱:", email || "未找到");
+      console.log("用户名:", name || "未找到");
+      console.log("登录状态:", !!email);
 
       return {
         isLoggedIn: !!email,
         email,
-        name,
+        username: name,
+        cursorUserId: email,
+        avatar: "",
+        membershipType: "",
+        token: "",
       };
     } catch (error) {
-      console.error("获取 Cursor 用户信息失败:", error);
+      console.error("❌ 备用方法获取用户信息失败:", error);
       return { isLoggedIn: false };
     }
   }
@@ -1094,6 +1316,9 @@ export class CursorIntegration {
    */
   getSystemInfo(): {
     platform: string;
+    version: string;
+    isLoggedIn: boolean;
+    cursorPath: string;
     configPath: string;
     mcpPath: string;
     rulesPath: string;
@@ -1101,6 +1326,12 @@ export class CursorIntegration {
   } {
     return {
       platform: this.platform,
+      version: process.version, // Node.js 版本
+      isLoggedIn: false, // 这里应该检查登录状态，暂时设为false
+      cursorPath:
+        this.configPaths.customInstallPath ||
+        this.configPaths.cliPath ||
+        "未找到",
       configPath: this.configPaths.settingsPath || "未找到",
       mcpPath: this.configPaths.mcpPath || "未找到",
       rulesPath: this.configPaths.rulesPath || "未找到",

@@ -4,7 +4,7 @@ const axios = require("axios");
 // 测试配置
 const config = {
   development: {
-    baseURL: "http://localhost:6666/diflow/api",
+    baseURL: "http://localhost:3001/diflow/api",
     name: "开发环境",
   },
   production: {

@@ -1,164 +1,142 @@
-import axios, { AxiosInstance, AxiosResponse } from "axios";
+import { sendTaskToVscode } from "./vscodeUtils";
 
-// 获取API基础URL，优先使用环境变量，否则使用默认值
-const getApiBaseUrl = () => {
-  return (
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:6666/diflow/api"
-  );
+// 基础 URL 配置
+const BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/diflow";
+
+/**
+ * 通用网络请求函数，使用 VS Code 扩展代理
+ */
+const request = async (
+  method: string,
+  url: string,
+  data?: Record<string, unknown> | unknown[],
+  headers?: Record<string, string>,
+): Promise<{
+  status: number;
+  data: unknown;
+  headers: Record<string, string>;
+}> => {
+  try {
+    console.log("HTTP请求:", method.toUpperCase(), url, data);
+
+    // 构建完整的 URL
+    const fullUrl = url.startsWith("http") ? url : `${BASE_URL}${url}`;
+
+    // 通过 VS Code 扩展代理请求
+    const result = await sendTaskToVscode("proxyRequest", {
+      method,
+      url: fullUrl,
+      data,
+      headers,
+    });
+
+    console.log("HTTP响应:", result);
+
+    if (result.success) {
+      return {
+        status: result.status,
+        data: result.data,
+        headers: result.headers,
+      };
+    } else {
+      throw new Error(result.message || "网络请求失败");
+    }
+  } catch (error) {
+    console.error("响应错误:", error);
+    throw error;
+  }
 };
-
-// 创建axios实例
-const httpClient: AxiosInstance = axios.create({
-  baseURL: getApiBaseUrl(),
-  timeout: 10000,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-// 请求拦截器
-httpClient.interceptors.request.use(
-  (config) => {
-    console.log(
-      "HTTP请求:",
-      config.method?.toUpperCase(),
-      config.url,
-      config.data,
-    );
-    return config;
-  },
-  (error) => {
-    console.error("HTTP请求错误:", error);
-    return Promise.reject(error);
-  },
-);
-
-// 响应拦截器
-httpClient.interceptors.response.use(
-  (response) => {
-    console.log("HTTP响应:", response.status, response.data);
-    return response;
-  },
-  (error) => {
-    console.error(
-      "HTTP响应错误:",
-      error.response?.status,
-      error.response?.data,
-    );
-    return Promise.reject(error);
-  },
-);
 
 // API接口定义
 export const pluginApi = {
   // 用户认证
-  auth: (userEmail: string): Promise<AxiosResponse<any>> => {
-    return httpClient.post("/auth", { userEmail });
-  },
+  loginOrCreateUser: (
+    email: string,
+    username?: string,
+    cursorUserId?: string,
+    avatar?: string,
+  ) =>
+    request("POST", "/auth/login", {
+      email,
+      username,
+      cursorUserId,
+      avatar,
+    }),
 
   // 获取用户信息
-  getUserInfo: (
-    userEmail: string,
-    token: string,
-  ): Promise<AxiosResponse<any>> => {
-    return httpClient.get(`/user/${userEmail}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  },
+  getUserInfo: (userEmail: string, token: string) =>
+    request("GET", `/users/${userEmail}`, undefined, {
+      Authorization: `Bearer ${token}`,
+    }),
 
   // 获取用户规则
-  getUserRules: (
-    userEmail: string,
-    token: string,
-  ): Promise<AxiosResponse<any>> => {
-    return httpClient.get(`/user/${userEmail}/rules`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  },
+  getUserRules: (userEmail: string, token: string) =>
+    request("GET", `/cursor/rules`, undefined, {
+      Authorization: `Bearer ${token}`,
+    }),
 
-  // 保存用户规则
+  // 保存用户规则（批量同步）
   saveUserRules: (
     userEmail: string,
-    rules: any,
+    rules: Array<{ ruleName: string; ruleContent: string; sortOrder?: number }>,
     token: string,
-  ): Promise<AxiosResponse<any>> => {
-    return httpClient.put(
-      `/user/${userEmail}/rules`,
-      { rules },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-  },
+  ) =>
+    request("POST", `/cursor/sync/rules`, rules, {
+      Authorization: `Bearer ${token}`,
+    }),
 
   // 删除用户规则
-  deleteUserRules: (
-    userEmail: string,
-    token: string,
-  ): Promise<AxiosResponse<any>> => {
-    return httpClient.delete(`/user/${userEmail}/rules`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  },
+  deleteUserRules: (userEmail: string, ruleId: number, token: string) =>
+    request("DELETE", `/cursor/rules/${ruleId}`, undefined, {
+      Authorization: `Bearer ${token}`,
+    }),
 
-  // 获取MCP服务器配置
-  getMcpServers: (
-    userEmail: string,
-    token: string,
-  ): Promise<AxiosResponse<any>> => {
-    return httpClient.get(`/user/${userEmail}/mcps`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  },
+  // 获取MCP服务器
+  getMcpServers: (userEmail: string, token: string) =>
+    request("GET", `/cursor/mcps`, undefined, {
+      Authorization: `Bearer ${token}`,
+    }),
 
-  // 保存MCP服务器配置
+  // 保存MCP服务器（批量同步）
   saveMcpServers: (
     userEmail: string,
-    mcps: any,
+    mcps: Array<{
+      serverName: string;
+      command: string;
+      args?: string[];
+      env?: Record<string, string>;
+      sortOrder?: number;
+    }>,
     token: string,
-  ): Promise<AxiosResponse<any>> => {
-    return httpClient.put(
-      `/user/${userEmail}/mcps`,
-      { mcps },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-  },
+  ) =>
+    request("POST", `/cursor/sync/mcps`, mcps, {
+      Authorization: `Bearer ${token}`,
+    }),
 
-  // 删除MCP服务器配置
-  deleteMcpServers: (
-    userEmail: string,
-    token: string,
-  ): Promise<AxiosResponse<any>> => {
-    return httpClient.delete(`/user/${userEmail}/mcps`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  },
+  // 删除MCP服务器
+  deleteMcpServers: (userEmail: string, serverId: number, token: string) =>
+    request("DELETE", `/cursor/mcps/${serverId}`, undefined, {
+      Authorization: `Bearer ${token}`,
+    }),
 };
 
 // 错误处理函数
-export const handleApiError = (error: any) => {
-  if (error.response) {
-    // 服务器响应错误
+export const handleApiError = (error: unknown) => {
+  if (error instanceof Error) {
     return {
       success: false,
-      error: error.response.data?.message || "服务器错误",
-      status: error.response.status,
-    };
-  } else if (error.request) {
-    // 网络错误
-    return {
-      success: false,
-      error: "网络连接失败",
-    };
-  } else {
-    // 其他错误
-    return {
-      success: false,
-      error: error.message || "未知错误",
+      message: error.message,
+      status: -1,
     };
   }
+
+  // 其他错误
+  return {
+    success: false,
+    message: "未知错误",
+    status: -1,
+  };
 };
 
-export default httpClient;
+export default { pluginApi, handleApiError };
