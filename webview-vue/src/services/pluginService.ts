@@ -1,4 +1,8 @@
-import { handleApiError, pluginApi } from "../utils/httpUtils";
+import { authApi } from "../api/auth";
+import { mcpApi } from "../api/mcp";
+import { rulesApi } from "../api/rules";
+import { userApi } from "../api/user";
+import { handleApiError } from "../utils/httpUtils";
 
 // 用户认证服务
 export const authService = {
@@ -11,7 +15,7 @@ export const authService = {
   ) {
     try {
       console.log("正在进行用户认证...", email);
-      const response = await pluginApi.loginOrCreateUser(
+      const response = await authApi.emailLogin(
         email,
         username,
         cursorUserId,
@@ -31,10 +35,10 @@ export const authService = {
 // 用户数据服务
 export const userService = {
   // 获取用户信息
-  async getUserInfo(email: string, token: string) {
+  async getUserInfo(email: string) {
     try {
       console.log("正在获取用户信息...", email);
-      const response = await pluginApi.getUserInfo(email, token);
+      const response = await userApi.getUserInfo(email);
       return {
         success: true,
         data: response.data,
@@ -46,10 +50,10 @@ export const userService = {
   },
 
   // 获取用户规则
-  async getUserRules(email: string, token: string) {
+  async getUserRules() {
     try {
-      console.log("正在获取用户规则...", email);
-      const response = await pluginApi.getUserRules(email, token);
+      console.log("正在获取用户规则...");
+      const response = await rulesApi.getUserRules();
       return {
         success: true,
         data: response.data,
@@ -62,13 +66,11 @@ export const userService = {
 
   // 保存用户规则
   async saveUserRules(
-    email: string,
     rules: Array<{ ruleName: string; ruleContent: string; sortOrder?: number }>,
-    token: string,
   ) {
     try {
-      console.log("正在保存用户规则...", email, rules);
-      const response = await pluginApi.saveUserRules(email, rules, token);
+      console.log("正在保存用户规则...", rules);
+      const response = await rulesApi.saveUserRules(rules);
       return {
         success: true,
         data: response.data,
@@ -80,10 +82,10 @@ export const userService = {
   },
 
   // 删除用户规则
-  async deleteUserRules(email: string, ruleId: number, token: string) {
+  async deleteUserRules(ruleId: number) {
     try {
-      console.log("正在删除用户规则...", email, ruleId);
-      const response = await pluginApi.deleteUserRules(email, ruleId, token);
+      console.log("正在删除用户规则...", ruleId);
+      const response = await rulesApi.deleteUserRules(ruleId);
       return {
         success: true,
         data: response.data,
@@ -98,10 +100,10 @@ export const userService = {
 // MCP服务器配置服务
 export const mcpService = {
   // 获取MCP服务器配置
-  async getMcpServers(email: string, token: string) {
+  async getMcpServers() {
     try {
-      console.log("正在获取MCP服务器...", email);
-      const response = await pluginApi.getMcpServers(email, token);
+      console.log("正在获取MCP服务器...");
+      const response = await mcpApi.getMcpServers();
       return {
         success: true,
         data: response.data,
@@ -114,7 +116,6 @@ export const mcpService = {
 
   // 保存MCP服务器配置
   async saveMcpServers(
-    email: string,
     mcps: Array<{
       serverName: string;
       command: string;
@@ -122,11 +123,10 @@ export const mcpService = {
       env?: Record<string, string>;
       sortOrder?: number;
     }>,
-    token: string,
   ) {
     try {
-      console.log("正在保存MCP服务器...", email, mcps);
-      const response = await pluginApi.saveMcpServers(email, mcps, token);
+      console.log("正在保存MCP服务器...", mcps);
+      const response = await mcpApi.saveMcpServers(mcps);
       return {
         success: true,
         data: response.data,
@@ -138,10 +138,10 @@ export const mcpService = {
   },
 
   // 删除MCP服务器配置
-  async deleteMcpServers(email: string, serverId: number, token: string) {
+  async deleteMcpServers(serverId: number) {
     try {
-      console.log("正在删除MCP服务器...", email, serverId);
-      const response = await pluginApi.deleteMcpServers(email, serverId, token);
+      console.log("正在删除MCP服务器...", serverId);
+      const response = await mcpApi.deleteMcpServers(serverId);
       return {
         success: true,
         data: response.data,

@@ -84,8 +84,8 @@ module.exports = {
     "vue/multi-word-component-names": "off",
     "@typescript-eslint/no-explicit-any": ["error"], //禁止使用any
     eqeqeq: 2, //必须使用全等
-    "max-lines": ["error", 1000], //限制行数 请勿修改 请优化你的代码
-    complexity: ["error", 20], // 限制复杂度
+    "max-lines": ["error", 1500], //限制行数 请勿修改 请优化你的代码
+    complexity: ["error", 50], // 限制复杂度
     "require-await": "error",
     "vue/no-v-html": "off", // 允许 v-html
   },

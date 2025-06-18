@@ -135,14 +135,18 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from "vue";
+import { message } from "ant-design-vue";
+import { nextTick, onMounted, reactive, ref } from "vue";
 
+import { authApi } from "../../api/auth";
+import { mcpApi, type McpServerItem } from "../../api/mcp";
+import { type RuleItem, rulesApi } from "../../api/rules";
 import {
   authService,
   mcpService,
   userService,
 } from "../../services/pluginService";
-import { testServerHealth } from "../../utils/serverHealthCheck";
+import { httpRequest } from "../../utils/httpUtils";
 import { sendTaskToVscode } from "../../utils/vscodeUtils";
 import BasicInfo from "./components/BasicInfo.vue";
 import CloudSync from "./components/CloudSync.vue";
@@ -183,20 +187,8 @@ interface McpConfig {
   env?: Record<string, string>;
 }
 
-// 添加API响应类型定义
-interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  message?: string;
-}
-
-interface AuthData {
-  token: string;
-  user?: Record<string, unknown>;
-}
-
-interface UserRulesData {
-  rules: Array<{
+interface CloudRulesResponse {
+  rules?: Array<{
     id: number;
     ruleName: string;
     ruleContent: string;
@@ -204,8 +196,8 @@ interface UserRulesData {
   }>;
 }
 
-interface McpData {
-  mcps: Array<{
+interface CloudMcpResponse {
+  mcps?: Array<{
     id: number;
     serverName: string;
     command: string;
@@ -226,7 +218,14 @@ const newMcpServer = reactive({
 // 使用工具函数创建初始状态
 const state = createInitialState();
 const systemInfo = reactive(state.systemInfo);
-const userInfo = reactive(state.userInfo);
+const userInfo = ref({
+  isLoggedIn: false,
+  token: null as string | null,
+  email: null as string | null,
+  username: "",
+  cursorUserId: "",
+  avatar: "",
+});
 const syncInfo = reactive(state.syncInfo);
 const loading = reactive(state.loading);
 const syncLogs = ref(state.syncLogs);
@@ -266,6 +265,303 @@ const handleSetCustomPath = async () => {
     addTestLog("路径设置成功", "success");
   } catch (error) {
     addTestLog(`路径设置失败: ${error}`, "error");
+  }
+};
+
+/**
+ * 检查并初始化登录状态
+ */
+const checkCloudLoginStatus = async () => {
+  try {
+    console.log("🔍 检查云端登录状态...");
+
+    // 获取当前用户信息
+    const cursorUserInfo = await sendTaskToVscode("getCursorUserInfo", {});
+    console.log("🔍 当前用户信息:", cursorUserInfo);
+
+    if (!cursorUserInfo || !cursorUserInfo.email) {
+      console.log("❌ 用户未登录或无邮箱信息");
+      userInfo.value = {
+        isLoggedIn: false,
+        token: null,
+        email: null,
+        username: "",
+        cursorUserId: "",
+        avatar: "",
+      };
+      return;
+    }
+
+    // 获取存储的认证信息
+    const savedToken = localStorage.getItem("diflow_cloud_token");
+    const savedEmail = localStorage.getItem("diflow_user_email");
+
+    console.log("🔍 当前登录状态:");
+    console.log("  - userInfo.isLoggedIn:", userInfo.value.isLoggedIn);
+    console.log(
+      "  - userInfo.token:",
+      userInfo.value.token
+        ? `${userInfo.value.token.substring(0, 20)}...`
+        : "null",
+    );
+    console.log("  - userInfo.email:", userInfo.value.email);
+
+    // 检查是否有Auth0 token但没有服务器token
+    if (
+      cursorUserInfo.token &&
+      (!savedToken || savedEmail !== cursorUserInfo.email)
+    ) {
+      console.log("🔄 检测到Auth0 token，需要转换为服务器token");
+
+      // 解析Auth0 token以获取用户信息
+      let auth0TokenPayload: any = null;
+      try {
+        const tokenParts = cursorUserInfo.token.split(".");
+        if (tokenParts.length === 3) {
+          const payload = JSON.parse(atob(tokenParts[1]));
+          auth0TokenPayload = payload;
+          console.log("🔍 JWT Token 分析:");
+          console.log("  - 解码结果:", jwt_decode(cursorUserInfo.token));
+          console.log("  - 当前时间戳:", Math.floor(Date.now() / 1000));
+          console.log("  - Token签发时间 (iat):", payload.iat);
+          console.log("  - Token过期时间 (exp):", payload.exp);
+
+          // 检查token是否过期
+          const currentTime = Math.floor(Date.now() / 1000);
+          const isExpired = payload.exp && payload.exp < currentTime;
+          console.log("  - Token是否过期:", isExpired);
+
+          if (isExpired) {
+            console.log("❌ Auth0 token已过期");
+            // 清理过期的认证信息
+            localStorage.removeItem("diflow_cloud_token");
+            localStorage.removeItem("diflow_user_email");
+            userInfo.value = {
+              isLoggedIn: false,
+              token: null,
+              email: null,
+              username: "",
+              cursorUserId: "",
+              avatar: "",
+            };
+            return;
+          }
+
+          console.log("  - Token用户信息:", {
+            sub: payload.sub,
+            email: payload.email,
+            username: payload.username,
+          });
+        }
+      } catch (e) {
+        console.error("❌ 解析Auth0 token失败:", e);
+      }
+
+      // 使用邮箱信息向服务器换取token
+      try {
+        console.log("📝 确保localStorage中有正确的认证信息...");
+
+        // 先清理旧的认证信息
+        localStorage.removeItem("diflow_cloud_token");
+        localStorage.removeItem("diflow_user_email");
+
+        // 调用服务器的email登录接口
+        const response = await authApi.emailLogin(
+          cursorUserInfo.email,
+          cursorUserInfo.username || cursorUserInfo.email.split("@")[0],
+          auth0TokenPayload?.sub || "",
+          cursorUserInfo.avatar || "",
+        );
+
+        if (
+          response &&
+          response.data &&
+          typeof response.data === "object" &&
+          "access_token" in response.data
+        ) {
+          console.log("✅ 成功获取服务器token");
+          const accessToken = (response.data as any).access_token;
+
+          // 保存新的认证信息
+          localStorage.setItem("diflow_cloud_token", accessToken);
+          localStorage.setItem("diflow_user_email", cursorUserInfo.email);
+
+          // 更新用户状态
+          userInfo.value = {
+            isLoggedIn: true,
+            token: accessToken,
+            email: cursorUserInfo.email,
+            username: cursorUserInfo.username || "",
+            cursorUserId: auth0TokenPayload?.sub || "",
+            avatar: cursorUserInfo.avatar || "",
+          };
+
+          console.log("🔍 验证localStorage中的认证信息:");
+          console.log(
+            "  - savedToken:",
+            localStorage.getItem("diflow_cloud_token")
+              ? `${localStorage
+                  .getItem("diflow_cloud_token")!
+                  .substring(0, 20)}...`
+              : "null",
+          );
+          console.log(
+            "  - savedEmail:",
+            localStorage.getItem("diflow_user_email"),
+          );
+          console.log(
+            "  - token匹配:",
+            localStorage.getItem("diflow_cloud_token") === accessToken,
+          );
+
+          return;
+        } else {
+          console.error("❌ 服务器返回无效的token响应:", response);
+        }
+      } catch (error) {
+        console.error("❌ token交换失败:", error);
+        // 清理无效的登录状态
+        localStorage.removeItem("diflow_cloud_token");
+        localStorage.removeItem("diflow_user_email");
+        userInfo.value = {
+          isLoggedIn: false,
+          token: null,
+          email: null,
+          username: "",
+          cursorUserId: "",
+          avatar: "",
+        };
+        return;
+      }
+    }
+
+    // 如果已有有效的服务器token，验证其有效性
+    if (savedToken && savedEmail === cursorUserInfo.email) {
+      console.log("🔍 验证现有服务器token...");
+
+      try {
+        // 尝试解码token检查是否过期
+        const tokenParts = savedToken.split(".");
+        if (tokenParts.length === 3) {
+          const payload = JSON.parse(atob(tokenParts[1]));
+          const currentTime = Math.floor(Date.now() / 1000);
+          const isExpired = payload.exp && payload.exp < currentTime;
+
+          if (isExpired) {
+            console.log("❌ 服务器token已过期，重新获取");
+            localStorage.removeItem("diflow_cloud_token");
+            localStorage.removeItem("diflow_user_email");
+            // 递归调用重新获取token
+            return await checkCloudLoginStatus();
+          }
+        }
+
+        // Token有效，更新用户状态
+        userInfo.value = {
+          isLoggedIn: true,
+          token: savedToken,
+          email: cursorUserInfo.email,
+          username: cursorUserInfo.username || "",
+          cursorUserId: cursorUserInfo.cursorUserId || "",
+          avatar: cursorUserInfo.avatar || "",
+        };
+        console.log("✅ 使用现有有效token");
+        return;
+      } catch (error) {
+        console.error("❌ 验证token失败:", error);
+        localStorage.removeItem("diflow_cloud_token");
+        localStorage.removeItem("diflow_user_email");
+      }
+    }
+
+    // 如果没有有效token，设置为未登录状态
+    userInfo.value = {
+      isLoggedIn: false,
+      token: null,
+      email: null,
+      username: "",
+      cursorUserId: "",
+      avatar: "",
+    };
+  } catch (error) {
+    console.error("❌ 检查云端登录状态失败:", error);
+    userInfo.value = {
+      isLoggedIn: false,
+      token: null,
+      email: null,
+      username: "",
+      cursorUserId: "",
+      avatar: "",
+    };
+  }
+};
+
+/**
+ * 处理同步数据 - CloudSync组件需要的函数
+ */
+const handleSyncData = async () => {
+  console.log("处理同步数据...");
+  await handleSyncAllData();
+};
+
+/**
+ * 切换自动同步 - CloudSync组件需要的函数
+ */
+const toggleAutoSync = (enabled: boolean) => {
+  console.log("切换自动同步:", enabled);
+  syncInfo.autoSync = enabled;
+  addSyncLog(`自动同步已${enabled ? "开启" : "关闭"}`, "info");
+};
+
+/**
+ * 处理用户登录 - CloudSync组件需要的函数
+ */
+const handleLoginUser = () => {
+  console.log("处理用户登录...");
+  addSyncLog("请在浏览器中完成登录", "info");
+  // 这里可以添加打开登录页面的逻辑
+};
+
+/**
+ * 处理用户退出 - CloudSync组件需要的函数
+ */
+const handleLogoutUser = () => {
+  console.log("处理用户退出...");
+
+  // 清除localStorage中的认证信息
+  localStorage.removeItem("diflow_cloud_token");
+  localStorage.removeItem("diflow_user_email");
+
+  // 清除userInfo
+  userInfo.value = {
+    isLoggedIn: false,
+    token: null,
+    email: null,
+    username: "",
+    cursorUserId: "",
+    avatar: "",
+  };
+
+  addSyncLog("用户已退出登录", "success");
+};
+
+/**
+ * 测试服务器连接 - ServerTest组件需要的函数
+ */
+const testServerConnection = async () => {
+  console.log("测试服务器连接...");
+  addTestLog("开始测试服务器连接...", "info");
+
+  try {
+    // 测试基本连接
+    const response = await httpRequest("GET", "/health");
+    if (response) {
+      addTestLog("服务器连接测试成功", "success");
+    } else {
+      addTestLog("服务器连接测试失败", "error");
+    }
+  } catch (error) {
+    addTestLog(`服务器连接测试失败: ${error}`, "error");
   }
 };
 
@@ -318,12 +614,12 @@ const clearRules = async () => {
  * 同步MCP服务器到数据库
  */
 const syncMcpServersToDatabase = async () => {
-  // 检查云端登录状态
+  // 检查登录状态
   const cloudToken = localStorage.getItem("diflow_cloud_token");
-  const cloudEmail = localStorage.getItem("diflow_cloud_email");
+  const cloudEmail = localStorage.getItem("diflow_user_email");
 
   if (!cloudToken || !cloudEmail) {
-    addTestLog("用户未登录云端，跳过数据库同步", "info");
+    addTestLog("用户未登录，跳过数据库同步", "info");
     return;
   }
 
@@ -337,11 +633,7 @@ const syncMcpServersToDatabase = async () => {
       sortOrder: index + 1,
     }));
 
-    const result = await mcpService.saveMcpServers(
-      cloudEmail,
-      mcpsForDatabase,
-      cloudToken,
-    );
+    const result = await mcpService.saveMcpServers(mcpsForDatabase);
 
     if (result.success) {
       addTestLog("MCP配置已同步到数据库", "success");
@@ -358,30 +650,43 @@ const syncMcpServersToDatabase = async () => {
  * 从数据库加载MCP服务器配置
  */
 const loadMcpServersFromDatabase = async (): Promise<McpServer[]> => {
-  // 检查云端登录状态
-  const cloudToken = localStorage.getItem("diflow_cloud_token");
-  const cloudEmail = localStorage.getItem("diflow_cloud_email");
+  console.log("🔍 开始从数据库加载MCP服务器配置...");
 
-  if (!cloudToken || !cloudEmail) {
-    addTestLog("用户未登录云端，跳过数据库加载", "info");
+  // 优先检查userInfo中的登录状态
+  console.log("🔍 数据库加载检查:");
+  console.log("  - userInfo.isLoggedIn:", userInfo.value.isLoggedIn);
+  console.log(
+    "  - userInfo.token:",
+    userInfo.value.token
+      ? `${userInfo.value.token.substring(0, 20)}...`
+      : "null",
+  );
+  console.log("  - userInfo.email:", userInfo.value.email);
+
+  if (
+    !userInfo.value.isLoggedIn ||
+    !userInfo.value.token ||
+    !userInfo.value.email
+  ) {
+    console.log("⚠️ 用户未登录，跳过数据库加载");
+    addTestLog("用户未登录，跳过数据库加载", "info");
     return [];
   }
 
-  try {
-    const result = await mcpService.getMcpServers(cloudEmail, cloudToken);
-    if (result.success && "data" in result && result.data) {
-      const mcpData = result.data as {
-        mcps?: Array<{
-          serverName: string;
-          command: string;
-          args?: string[];
-          env?: Record<string, string>;
-        }>;
-      };
+  console.log("✅ 用户已登录，开始从数据库获取MCP配置");
 
-      if (mcpData.mcps) {
+  try {
+    const result = await mcpService.getMcpServers();
+    console.log("🔍 数据库查询结果:", result);
+
+    if (result.success && "data" in result && result.data) {
+      const responseData = result.data as CloudMcpResponse;
+      console.log("🔍 解析后的响应数据:", responseData);
+
+      if (responseData.mcps) {
+        console.log(`✅ 从数据库加载到 ${responseData.mcps.length} 个MCP配置`);
         addTestLog("从数据库加载MCP配置成功", "success");
-        return mcpData.mcps.map(
+        return responseData.mcps.map(
           (mcp): McpServer => ({
             name: mcp.serverName,
             command: mcp.command,
@@ -391,9 +696,11 @@ const loadMcpServersFromDatabase = async (): Promise<McpServer[]> => {
         );
       }
     }
+    console.log("⚠️ 数据库中无MCP配置");
     addTestLog("数据库中无MCP配置", "info");
     return [];
   } catch (error) {
+    console.log("❌ 从数据库加载MCP配置失败:", error);
     addTestLog(`从数据库加载MCP配置失败: ${error}`, "error");
     return [];
   }
@@ -520,273 +827,102 @@ const removeMcpServer = async (name: string) => {
   }
 };
 
-// 数据同步
-const handleSyncData = async () => {
-  loading.sync = true;
-  addSyncLog("开始同步数据...", "info");
-
-  try {
-    // 检查用户登录状态
-    if (!userInfo.isLoggedIn) {
-      addSyncLog("用户未登录，执行本地同步", "info");
-      await sendTaskToVscode("syncData");
-      addSyncLog("本地数据同步成功", "success");
-    } else {
-      // 用户已登录，执行云端同步
-      await handleSyncAllData();
-    }
-
-    syncInfo.lastSyncTime = new Date();
-    syncInfo.syncStatus = "已同步";
-  } catch (error) {
-    addSyncLog(`同步错误: ${error}`, "error");
-  } finally {
-    loading.sync = false;
-  }
-};
-
-// 切换自动同步
-const toggleAutoSync = async () => {
-  try {
-    await sendTaskToVscode("toggleAutoSync", { enabled: !syncInfo.autoSync });
-    syncInfo.autoSync = !syncInfo.autoSync;
-    addTestLog(`自动同步已${syncInfo.autoSync ? "开启" : "关闭"}`, "success");
-  } catch (error) {
-    addTestLog(`自动同步设置失败: ${error}`, "error");
-  }
-};
-
-// 服务器连接测试
-const testServerConnection = async () => {
-  loading.test = true;
-  addTestLog("开始测试服务器连接...", "info");
-
-  try {
-    const result = await testServerHealth();
-
-    if (result.isHealthy) {
-      addTestLog(result.summary, "success");
-      result.results.forEach((r) => {
-        if (r.status === "success") {
-          addTestLog(
-            `✓ ${r.endpoint || "Unknown"}: ${r.statusCode}`,
-            "success",
-          );
-        } else {
-          addTestLog(`✗ ${r.endpoint || "Unknown"}: ${r.message}`, "error");
-        }
-      });
-    } else {
-      addTestLog(result.summary, "error");
-      result.results.forEach((r) => {
-        if (r.status === "error") {
-          addTestLog(`✗ ${r.endpoint || "Unknown"}: ${r.message}`, "error");
-        }
-      });
-    }
-  } catch (error) {
-    addTestLog(`服务器测试错误: ${error}`, "error");
-  } finally {
-    loading.test = false;
-  }
-};
-
-/**
- * 检查云端登录状态
- */
-const checkCloudLoginStatus = async () => {
-  try {
-    // 1. 从本地存储检查保存的云端认证信息
-    const savedToken = localStorage.getItem("diflow_cloud_token");
-    const savedEmail = localStorage.getItem("diflow_cloud_email");
-    const savedUsername = localStorage.getItem("diflow_cloud_username");
-    const savedCursorUserId = localStorage.getItem(
-      "diflow_cloud_cursor_user_id",
-    );
-    const savedAvatar = localStorage.getItem("diflow_cloud_avatar");
-
-    if (savedToken && savedEmail) {
-      // 如果有保存的云端认证信息，恢复登录状态
-      userInfo.email = savedEmail;
-      userInfo.username = savedUsername || "";
-      userInfo.cursorUserId = savedCursorUserId || "";
-      userInfo.avatar = savedAvatar || "";
-      userInfo.token = savedToken;
-      userInfo.isLoggedIn = true;
-
-      syncInfo.syncStatus = "已连接";
-      addSyncLog("检测到已保存的云端登录状态", "info");
-      return;
-    }
-
-    // 2. 如果没有保存的云端认证信息，检查是否可以自动登录
-    const cursorUserInfo = await sendTaskToVscode("getCursorUserInfo");
-
-    if (cursorUserInfo && cursorUserInfo.email && cursorUserInfo.isLoggedIn) {
-      addSyncLog("检测到 Cursor 用户信息，开始自动云端认证...", "info");
-
-      // 自动执行云端认证
-      try {
-        const authResult = await authService.loginOrCreateUser(
-          cursorUserInfo.email,
-          cursorUserInfo.username,
-          cursorUserInfo.cursorUserId,
-          cursorUserInfo.avatar,
-        );
-
-        if (authResult.success && "data" in authResult && authResult.data) {
-          // 更新用户信息
-          const authData = authResult.data as AuthData;
-          userInfo.email = cursorUserInfo.email;
-          userInfo.username = cursorUserInfo.username || "";
-          userInfo.cursorUserId = cursorUserInfo.cursorUserId || "";
-          userInfo.avatar = cursorUserInfo.avatar || "";
-          userInfo.token = authData.token;
-          userInfo.isLoggedIn = true;
-
-          // 保存云端认证信息到本地存储
-          localStorage.setItem("diflow_cloud_token", authData.token);
-          localStorage.setItem("diflow_cloud_email", cursorUserInfo.email);
-          localStorage.setItem(
-            "diflow_cloud_username",
-            cursorUserInfo.username || "",
-          );
-          localStorage.setItem(
-            "diflow_cloud_cursor_user_id",
-            cursorUserInfo.cursorUserId || "",
-          );
-          localStorage.setItem(
-            "diflow_cloud_avatar",
-            cursorUserInfo.avatar || "",
-          );
-
-          addSyncLog("自动云端认证成功", "success");
-          syncInfo.syncStatus = "已连接";
-          return;
-        } else {
-          const errorMsg =
-            "message" in authResult ? authResult.message : "自动认证失败";
-          addSyncLog(`自动云端认证失败: ${errorMsg}`, "error");
-        }
-      } catch (error) {
-        addSyncLog(`自动云端认证异常: ${error}`, "error");
-      }
-    } else {
-      addSyncLog("未检测到 Cursor 用户登录状态", "info");
-    }
-
-    // 保持未登录状态
-    userInfo.isLoggedIn = false;
-    syncInfo.syncStatus = "未连接";
-  } catch (error) {
-    addSyncLog(`检查登录状态失败: ${error}`, "error");
-    userInfo.isLoggedIn = false;
-    syncInfo.syncStatus = "未连接";
-  }
-};
-
-/**
- * 用户登录处理
- */
-const handleLoginUser = async () => {
-  loading.login = true;
-  addSyncLog("开始用户登录...", "info");
-
-  try {
-    // 1. 获取Cursor用户信息
-    const cursorUserInfo = await sendTaskToVscode("getCursorUserInfo");
-
-    if (!cursorUserInfo || !cursorUserInfo.email) {
-      addSyncLog("无法获取Cursor用户信息，请确保Cursor已登录", "error");
-      return;
-    }
-
-    // 2. 调用认证服务
-    const authResult = await authService.loginOrCreateUser(
-      cursorUserInfo.email,
-      cursorUserInfo.username,
-      cursorUserInfo.cursorUserId,
-      cursorUserInfo.avatar,
-    );
-
-    if (authResult.success && "data" in authResult && authResult.data) {
-      // 3. 更新用户信息
-      const authData = authResult.data as AuthData;
-      userInfo.email = cursorUserInfo.email;
-      userInfo.username = cursorUserInfo.username || "";
-      userInfo.cursorUserId = cursorUserInfo.cursorUserId || "";
-      userInfo.avatar = cursorUserInfo.avatar || "";
-      userInfo.token = authData.token;
-      userInfo.isLoggedIn = true;
-
-      // 4. 保存云端认证信息到本地存储
-      localStorage.setItem("diflow_cloud_token", authData.token);
-      localStorage.setItem("diflow_cloud_email", cursorUserInfo.email);
-      localStorage.setItem(
-        "diflow_cloud_username",
-        cursorUserInfo.username || "",
-      );
-      localStorage.setItem(
-        "diflow_cloud_cursor_user_id",
-        cursorUserInfo.cursorUserId || "",
-      );
-      localStorage.setItem("diflow_cloud_avatar", cursorUserInfo.avatar || "");
-
-      addSyncLog("用户登录成功", "success");
-      syncInfo.syncStatus = "已连接";
-    } else {
-      const errorMsg =
-        "message" in authResult ? authResult.message : "登录失败";
-      addSyncLog(`登录失败: ${errorMsg}`, "error");
-    }
-  } catch (error) {
-    addSyncLog(`登录异常: ${error}`, "error");
-  } finally {
-    loading.login = false;
-  }
-};
-
-/**
- * 用户登出处理
- */
-const handleLogoutUser = () => {
-  loading.logout = true;
-  addSyncLog("用户登出...", "info");
-
-  try {
-    // 清空用户信息
-    userInfo.email = "";
-    userInfo.username = "";
-    userInfo.cursorUserId = "";
-    userInfo.avatar = "";
-    userInfo.token = "";
-    userInfo.isLoggedIn = false;
-
-    // 清空本地存储的云端认证信息
-    localStorage.removeItem("diflow_cloud_token");
-    localStorage.removeItem("diflow_cloud_email");
-    localStorage.removeItem("diflow_cloud_username");
-    localStorage.removeItem("diflow_cloud_cursor_user_id");
-    localStorage.removeItem("diflow_cloud_avatar");
-
-    syncInfo.syncStatus = "未连接";
-    syncInfo.rulesStatus = "unknown";
-    syncInfo.mcpStatus = "unknown";
-
-    addSyncLog("用户登出成功", "success");
-  } catch (error) {
-    addSyncLog(`登出异常: ${error}`, "error");
-  } finally {
-    loading.logout = false;
-  }
-};
-
 /**
  * 同步所有数据到云端
  */
 const handleSyncAllData = async () => {
+  console.log("🔄 开始同步所有数据...");
+  console.log("🔍 当前登录状态:");
+  console.log("  - userInfo.isLoggedIn:", userInfo.value.isLoggedIn);
+  console.log(
+    "  - userInfo.token:",
+    userInfo.value.token
+      ? `${userInfo.value.token.substring(0, 20)}...`
+      : "null",
+  );
+  console.log("  - userInfo.email:", userInfo.value.email);
+
+  // 如果用户未登录，提示先登录
+  if (
+    !userInfo.value.isLoggedIn ||
+    !userInfo.value.token ||
+    !userInfo.value.email
+  ) {
+    addSyncLog("用户未登录，无法同步数据", "error");
+    addSyncLog("请先点击登录按钮进行认证", "info");
+    return;
+  }
+
+  // 解码并检查JWT token
+  console.log("🔍 JWT Token 分析:");
+  const decodedToken = decodeJWT(userInfo.value.token);
+  console.log("  - 解码结果:", decodedToken);
+
+  if ("payload" in decodedToken && decodedToken.payload) {
+    const now = Math.floor(Date.now() / 1000);
+    console.log("  - 当前时间戳:", now);
+    console.log("  - Token签发时间 (iat):", decodedToken.payload.iat);
+    console.log("  - Token过期时间 (exp):", decodedToken.payload.exp);
+
+    if (decodedToken.payload.exp) {
+      const isExpired = now > decodedToken.payload.exp;
+      console.log("  - Token是否过期:", isExpired);
+
+      if (isExpired) {
+        addSyncLog("Token已过期，请重新登录", "error");
+        // 清除过期的token
+        userInfo.value.token = null;
+        userInfo.value.isLoggedIn = false;
+        localStorage.removeItem("diflow_cloud_token");
+        return;
+      }
+    }
+
+    console.log("  - Token用户信息:", {
+      sub: decodedToken.payload.sub,
+      email: decodedToken.payload.email,
+      username: decodedToken.payload.username,
+    });
+  }
+
+  // 确保localStorage中有正确的token
+  console.log("📝 确保localStorage中有正确的认证信息...");
+  localStorage.setItem("diflow_cloud_token", userInfo.value.token);
+  localStorage.setItem("diflow_user_email", userInfo.value.email);
+  if (userInfo.value.username) {
+    localStorage.setItem("diflow_cloud_username", userInfo.value.username);
+  }
+  if (userInfo.value.cursorUserId) {
+    localStorage.setItem(
+      "diflow_cloud_cursor_user_id",
+      userInfo.value.cursorUserId,
+    );
+  }
+  if (userInfo.value.avatar) {
+    localStorage.setItem("diflow_cloud_avatar", userInfo.value.avatar);
+  }
+
+  // 等待一小段时间确保localStorage写入完成
+  await new Promise((resolve) => setTimeout(resolve, 100));
+
+  // 验证localStorage中的token
+  const savedToken = localStorage.getItem("diflow_cloud_token");
+  const savedEmail = localStorage.getItem("diflow_user_email");
+  console.log("🔍 验证localStorage中的认证信息:");
+  console.log(
+    "  - savedToken:",
+    savedToken ? `${savedToken.substring(0, 20)}...` : "null",
+  );
+  console.log("  - savedEmail:", savedEmail);
+  console.log("  - token匹配:", savedToken === userInfo.value.token);
+
+  if (!savedToken || savedToken !== userInfo.value.token) {
+    addSyncLog("认证信息保存失败，无法同步", "error");
+    return;
+  }
+
   loading.syncAll = true;
-  addSyncLog("开始同步所有数据到云端...", "info");
+  addSyncLog("开始同步所有数据...", "info");
 
   try {
     // 并行执行规则和MCP同步
@@ -803,57 +939,48 @@ const handleSyncAllData = async () => {
 };
 
 /**
- * 同步规则到云端
+ * 同步用户规则到云端
  */
 const handleSyncRulesToCloud = async () => {
-  // 检查云端登录状态 - 使用userInfo对象而不是localStorage
-  if (!userInfo.isLoggedIn || !userInfo.token || !userInfo.email) {
-    addSyncLog("用户未登录云端，无法同步规则", "error");
-    return;
-  }
-
-  loading.syncRules = true;
-  addSyncLog("开始同步规则到云端...", "info");
-
   try {
-    // 1. 获取本地规则
-    const localRules = await sendTaskToVscode("getUserRules");
+    console.log("🔄 开始同步用户规则...");
 
-    if (!localRules) {
-      addSyncLog("本地无规则内容", "info");
-      syncInfo.rulesStatus = "synced";
+    // 检查登录状态
+    if (!userInfo.value.isLoggedIn || !userInfo.value.email) {
+      message.warning("请先登录账户");
       return;
     }
 
-    // 2. 转换为服务端格式
-    const rulesForServer = [
+    // 获取当前规则
+    const currentRules = cursorRules.value;
+    if (!currentRules || currentRules.trim() === "") {
+      message.warning("当前没有规则需要同步");
+      return;
+    }
+
+    // 格式化规则数据
+    const rules: RuleItem[] = [
       {
-        ruleName: "cursor-rules",
-        ruleContent: localRules,
+        ruleName: "cursor_rules",
+        ruleContent: currentRules,
         sortOrder: 1,
       },
     ];
 
-    // 3. 上传到服务端
-    const result = await userService.saveUserRules(
-      userInfo.email,
-      rulesForServer,
-      userInfo.token,
-    );
+    // 调用API同步规则
+    const result = await rulesApi.syncUserRules(rules);
 
     if (result.success) {
-      addSyncLog("规则同步到云端成功", "success");
-      syncInfo.rulesStatus = "synced";
+      message.success("规则同步成功");
+      addSyncLog("规则同步成功", "success");
     } else {
-      const errorMsg = "message" in result ? result.message : "同步失败";
-      addSyncLog(`规则同步失败: ${errorMsg}`, "error");
-      syncInfo.rulesStatus = "error";
+      message.error(result.message || "规则同步失败");
+      addSyncLog(`规则同步失败: ${result.message}`, "error");
     }
   } catch (error) {
-    addSyncLog(`规则同步异常: ${error}`, "error");
-    syncInfo.rulesStatus = "error";
-  } finally {
-    loading.syncRules = false;
+    console.error("同步规则失败:", error);
+    message.error(`同步规则失败: ${error}`);
+    addSyncLog(`同步规则失败: ${error}`, "error");
   }
 };
 
@@ -861,24 +988,25 @@ const handleSyncRulesToCloud = async () => {
  * 从云端下载规则
  */
 const handleSyncRulesFromCloud = async () => {
-  // 检查云端登录状态 - 使用userInfo对象而不是localStorage
-  if (!userInfo.isLoggedIn || !userInfo.token || !userInfo.email) {
-    addSyncLog("用户未登录云端，无法下载规则", "error");
+  // 检查登录状态 - 使用userInfo对象而不是localStorage
+  if (
+    !userInfo.value.isLoggedIn ||
+    !userInfo.value.token ||
+    !userInfo.value.email
+  ) {
+    addSyncLog("用户未登录，无法下载规则", "error");
     return;
   }
 
   loading.syncRules = true;
-  addSyncLog("开始从云端下载规则...", "info");
+  addSyncLog("开始从服务端下载规则...", "info");
 
   try {
     // 1. 从服务端获取规则
-    const result = await userService.getUserRules(
-      userInfo.email,
-      userInfo.token,
-    );
+    const result = await userService.getUserRules();
 
     if (result.success && "data" in result && result.data) {
-      const responseData = result.data as { rules?: any[] };
+      const responseData = result.data as CloudRulesResponse;
       const cloudRules = responseData.rules;
 
       if (cloudRules && cloudRules.length > 0) {
@@ -889,10 +1017,10 @@ const handleSyncRulesFromCloud = async () => {
         // 3. 更新界面显示
         cursorRules.value = ruleContent;
 
-        addSyncLog("规则从云端下载成功", "success");
+        addSyncLog("规则从服务端下载成功", "success");
         syncInfo.rulesStatus = "synced";
       } else {
-        addTestLog("云端无规则数据", "info");
+        addTestLog("服务端无规则数据", "info");
         syncInfo.rulesStatus = "synced";
       }
     } else {
@@ -912,63 +1040,61 @@ const handleSyncRulesFromCloud = async () => {
  * 同步MCP配置到云端
  */
 const handleSyncMcpToCloud = async () => {
-  // 检查云端登录状态 - 使用userInfo对象而不是localStorage
-  if (!userInfo.isLoggedIn || !userInfo.token || !userInfo.email) {
-    addSyncLog("用户未登录云端，无法同步MCP配置", "error");
-    return;
-  }
-
-  loading.syncMcp = true;
-  addSyncLog("开始同步MCP配置到云端...", "info");
-
   try {
-    // 1. 获取本地MCP配置
-    const localMcpConfig = await sendTaskToVscode("getMcpServers");
+    loading.syncMcp = true;
+    addSyncLog("开始同步MCP配置...", "info");
 
-    if (!localMcpConfig || typeof localMcpConfig !== "object") {
-      addSyncLog("本地无MCP配置", "info");
-      syncInfo.mcpStatus = "synced";
+    // 检查登录状态
+    if (!userInfo.value.isLoggedIn || !userInfo.value.email) {
+      message.warning("请先登录账户");
       return;
     }
 
-    // 2. 转换为服务端格式
-    const mcpsForServer = Object.entries(localMcpConfig).map(
-      (
-        [name, config]: [string, McpConfig],
-        index,
-      ): {
-        serverName: string;
-        command: string;
-        args?: string[];
-        env?: Record<string, string>;
-        sortOrder: number;
-      } => ({
-        serverName: name,
-        command: config.command,
-        args: config.args ?? [],
-        env: config.env ?? {},
-        sortOrder: index + 1,
-      }),
-    );
+    // 检查MCP配置
+    if (!mcpServers.value || mcpServers.value.length === 0) {
+      message.warning("当前没有MCP配置需要同步");
+      return;
+    }
 
-    // 3. 上传到服务端
-    const result = await mcpService.saveMcpServers(
-      userInfo.email,
-      mcpsForServer,
-      userInfo.token,
-    );
+    // 格式化MCP数据 - 确保是纯数据对象，避免DataCloneError
+    const mcps: McpServerItem[] = mcpServers.value.map((server, index) => {
+      // 创建纯数据对象，避免任何可能的函数或不可序列化内容
+      const cleanServer: McpServerItem = {
+        serverName: String(server.name || ""),
+        command: String(server.command || ""),
+        args: Array.isArray(server.args)
+          ? server.args.map((arg) => String(arg))
+          : [],
+        env:
+          server.env && typeof server.env === "object"
+            ? Object.fromEntries(
+                Object.entries(server.env).map(([key, value]) => [
+                  String(key),
+                  String(value),
+                ]),
+              )
+            : {},
+        sortOrder: index + 1,
+      };
+      return cleanServer;
+    });
+
+    console.log("🔍 清理后的MCP数据:", mcps);
+
+    // 调用API同步MCP配置
+    const result = await mcpApi.syncMcpServers(mcps);
 
     if (result.success) {
-      addSyncLog("MCP配置同步到云端成功", "success");
-      syncInfo.mcpStatus = "synced";
+      message.success("MCP配置同步成功");
+      addSyncLog("MCP配置同步成功", "success");
     } else {
-      const errorMsg = "message" in result ? result.message : "同步失败";
-      addSyncLog(`MCP配置同步失败: ${errorMsg}`, "error");
-      syncInfo.mcpStatus = "error";
+      message.error(result.message || "MCP配置同步失败");
+      addSyncLog(`MCP配置同步失败: ${result.message}`, "error");
     }
   } catch (error) {
-    addSyncLog(`MCP配置同步异常: ${error}`, "error");
-    syncInfo.mcpStatus = "error";
+    console.error("同步MCP配置失败:", error);
+    message.error(`同步MCP配置失败: ${error}`);
+    addSyncLog(`同步MCP配置失败: ${error}`, "error");
   } finally {
     loading.syncMcp = false;
   }
@@ -978,30 +1104,31 @@ const handleSyncMcpToCloud = async () => {
  * 从云端下载MCP配置
  */
 const handleSyncMcpFromCloud = async () => {
-  // 检查云端登录状态 - 使用userInfo对象而不是localStorage
-  if (!userInfo.isLoggedIn || !userInfo.token || !userInfo.email) {
-    addSyncLog("用户未登录云端，无法下载MCP配置", "error");
+  // 检查登录状态 - 使用userInfo对象而不是localStorage
+  if (
+    !userInfo.value.isLoggedIn ||
+    !userInfo.value.token ||
+    !userInfo.value.email
+  ) {
+    addSyncLog("用户未登录，无法下载MCP配置", "error");
     return;
   }
 
   loading.syncMcp = true;
-  addSyncLog("开始从云端下载MCP配置...", "info");
+  addSyncLog("开始从服务端下载MCP配置...", "info");
 
   try {
     // 1. 从服务端获取MCP配置
-    const result = await mcpService.getMcpServers(
-      userInfo.email,
-      userInfo.token,
-    );
+    const result = await mcpService.getMcpServers();
 
     if (result.success && "data" in result && result.data) {
-      const responseData = result.data as { servers?: any[] };
-      const cloudMcps = responseData.servers;
+      const responseData = result.data as CloudMcpResponse;
+      const cloudMcps = responseData.mcps;
 
       if (cloudMcps && cloudMcps.length > 0) {
         // 2. 转换为本地格式
         const mcpConfig: Record<string, McpConfig> = {};
-        cloudMcps.forEach((mcp: any) => {
+        cloudMcps.forEach((mcp) => {
           mcpConfig[mcp.serverName] = {
             command: mcp.command,
             args: mcp.args ?? [],
@@ -1015,10 +1142,10 @@ const handleSyncMcpFromCloud = async () => {
         // 4. 重新加载MCP服务器列表
         await loadMcpServers();
 
-        addSyncLog("MCP配置从云端下载成功", "success");
+        addSyncLog("MCP配置从服务端下载成功", "success");
         syncInfo.mcpStatus = "synced";
       } else {
-        addTestLog("云端无MCP配置数据", "info");
+        addTestLog("服务端无MCP配置数据", "info");
         syncInfo.mcpStatus = "synced";
       }
     } else {
@@ -1042,19 +1169,82 @@ const handleClearSyncLogs = () => {
   addSyncLog("同步日志已清空", "info");
 };
 
+/**
+ * 解码JWT token以便调试
+ */
+const decodeJWT = (token: string) => {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      return { error: "Invalid JWT format" };
+    }
+
+    // 解码payload (第二部分)
+    const payload = parts[1];
+    // 添加必要的padding
+    const paddedPayload = payload + "=".repeat((4 - (payload.length % 4)) % 4);
+    const decodedPayload = atob(paddedPayload);
+    const parsedPayload = JSON.parse(decodedPayload);
+
+    return {
+      header: JSON.parse(
+        atob(parts[0] + "=".repeat((4 - (parts[0].length % 4)) % 4)),
+      ),
+      payload: parsedPayload,
+      signature: parts[2],
+    };
+  } catch (error) {
+    return { error: `JWT decode failed: ${error}` };
+  }
+};
+
+/**
+ * 简单的JWT解码函数
+ */
+const jwt_decode = (token: string) => {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      throw new Error("Invalid JWT format");
+    }
+    const payload = parts[1];
+    const paddedPayload = payload + "=".repeat((4 - (payload.length % 4)) % 4);
+    return JSON.parse(atob(paddedPayload));
+  } catch (error) {
+    throw new Error(`JWT decode failed: ${error}`);
+  }
+};
+
 // 初始化函数
 onMounted(async () => {
+  console.log("🚀 页面初始化开始...");
+
   // 1. 检查系统状态
+  console.log("1️⃣ 检查系统状态");
   checkSystemStatus();
 
   // 2. 加载用户信息
+  console.log("2️⃣ 加载用户信息");
   loadUserInfo();
 
-  // 3. 检查云端登录状态
+  // 3. 检查登录状态 - 必须等待完成
+  console.log("3️⃣ 检查登录状态");
   await checkCloudLoginStatus();
 
-  // 4. 加载规则和MCP配置
+  console.log("🔍 登录状态检查完成，当前状态:");
+  console.log("  - userInfo.isLoggedIn:", userInfo.value.isLoggedIn);
+  console.log(
+    "  - userInfo.token:",
+    userInfo.value.token
+      ? `${userInfo.value.token.substring(0, 20)}...`
+      : "null",
+  );
+
+  // 4. 加载规则和MCP配置 - 在登录状态确定后执行
+  console.log("4️⃣ 加载规则和MCP配置");
   await Promise.all([loadRules(), loadMcpServers()]);
+
+  console.log("✅ 页面初始化完成");
 });
 </script>
 

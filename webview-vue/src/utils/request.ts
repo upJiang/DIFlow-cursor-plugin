@@ -1,15 +1,13 @@
 import { notification } from "ant-design-vue";
 import axios, { AxiosError, AxiosRequestConfig } from "axios";
 
-import { delCookie } from "./cookie";
+import { delCookie, getCookie } from "./cookie";
 
 // 设置超时时间
 const instance = axios.create({
   baseURL: "",
   timeout: 30 * 1000,
 });
-
-// const token = getCookie("access_token");
 
 const transformFromData = (data: { [key: string]: string }) => {
   const formData = new FormData();
@@ -28,7 +26,13 @@ instance.interceptors.request.use(
       config.headers["Content-Type"] = "multipart/form-data;charset=utf-8";
     }
 
-    // config.headers.authorization = `Bearer ${token}`;
+    // 如果请求头中没有Authorization，尝试从cookie中获取token
+    if (!config.headers.Authorization) {
+      const token = getCookie("access_token");
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
 
     return config;
   },
