@@ -137,8 +137,12 @@
 <script setup lang="ts">
 import { message } from "ant-design-vue";
 import { nextTick, onMounted, reactive, ref } from "vue";
+import { useRouter } from "vue-router";
 
-import { authApi } from "../../api/auth";
+import { authApi } from "@/api/auth";
+import { handleApiError, httpRequest } from "@/utils/httpUtils";
+import { sendTaskToVscode } from "@/utils/vscodeUtils";
+
 import { mcpApi, type McpServerItem } from "../../api/mcp";
 import { type RuleItem, rulesApi } from "../../api/rules";
 import {
@@ -146,8 +150,6 @@ import {
   mcpService,
   userService,
 } from "../../services/pluginService";
-import { httpRequest } from "../../utils/httpUtils";
-import { sendTaskToVscode } from "../../utils/vscodeUtils";
 import BasicInfo from "./components/BasicInfo.vue";
 import CloudSync from "./components/CloudSync.vue";
 import McpManagement from "./components/McpManagement.vue";
@@ -193,6 +195,7 @@ interface CloudRulesResponse {
     ruleName: string;
     ruleContent: string;
     sortOrder: number;
+    isEnabled: boolean;
   }>;
 }
 
@@ -275,223 +278,79 @@ const checkCloudLoginStatus = async () => {
   try {
     console.log("🔍 检查云端登录状态...");
 
-    // 获取当前用户信息
+    // 获取当前Cursor用户信息
     const cursorUserInfo = await sendTaskToVscode("getCursorUserInfo", {});
-    console.log("🔍 当前用户信息:", cursorUserInfo);
+    console.log("当前Cursor用户信息:", cursorUserInfo);
 
     if (!cursorUserInfo || !cursorUserInfo.email) {
-      console.log("❌ 用户未登录或无邮箱信息");
+      console.log("❌ 未获取到Cursor用户信息");
       userInfo.value = {
         isLoggedIn: false,
-        token: null,
-        email: null,
+        email: "",
         username: "",
         cursorUserId: "",
         avatar: "",
+        token: "",
       };
       return;
     }
 
-    // 获取存储的认证信息
-    const savedToken = localStorage.getItem("diflow_cloud_token");
-    const savedEmail = localStorage.getItem("diflow_user_email");
+    // 简化登录逻辑：直接使用email登录
+    try {
+      console.log("📝 使用邮箱登录...");
 
-    console.log("🔍 当前登录状态:");
-    console.log("  - userInfo.isLoggedIn:", userInfo.value.isLoggedIn);
-    console.log(
-      "  - userInfo.token:",
-      userInfo.value.token
-        ? `${userInfo.value.token.substring(0, 20)}...`
-        : "null",
-    );
-    console.log("  - userInfo.email:", userInfo.value.email);
+      const response = await authApi.emailLogin(
+        cursorUserInfo.email,
+        cursorUserInfo.username || cursorUserInfo.email.split("@")[0],
+        cursorUserInfo.cursorUserId || "",
+        cursorUserInfo.avatar || "",
+      );
 
-    // 检查是否有Auth0 token但没有服务器token
-    if (
-      cursorUserInfo.token &&
-      (!savedToken || savedEmail !== cursorUserInfo.email)
-    ) {
-      console.log("🔄 检测到Auth0 token，需要转换为服务器token");
+      if (
+        response &&
+        response.data &&
+        typeof response.data === "object" &&
+        "access_token" in response.data
+      ) {
+        console.log("✅ 登录成功");
+        const accessToken = (response.data as { access_token: string })
+          .access_token;
 
-      // 解析Auth0 token以获取用户信息
-      let auth0TokenPayload: any = null;
-      try {
-        const tokenParts = cursorUserInfo.token.split(".");
-        if (tokenParts.length === 3) {
-          const payload = JSON.parse(atob(tokenParts[1]));
-          auth0TokenPayload = payload;
-          console.log("🔍 JWT Token 分析:");
-          console.log("  - 解码结果:", jwt_decode(cursorUserInfo.token));
-          console.log("  - 当前时间戳:", Math.floor(Date.now() / 1000));
-          console.log("  - Token签发时间 (iat):", payload.iat);
-          console.log("  - Token过期时间 (exp):", payload.exp);
-
-          // 检查token是否过期
-          const currentTime = Math.floor(Date.now() / 1000);
-          const isExpired = payload.exp && payload.exp < currentTime;
-          console.log("  - Token是否过期:", isExpired);
-
-          if (isExpired) {
-            console.log("❌ Auth0 token已过期");
-            // 清理过期的认证信息
-            localStorage.removeItem("diflow_cloud_token");
-            localStorage.removeItem("diflow_user_email");
-            userInfo.value = {
-              isLoggedIn: false,
-              token: null,
-              email: null,
-              username: "",
-              cursorUserId: "",
-              avatar: "",
-            };
-            return;
-          }
-
-          console.log("  - Token用户信息:", {
-            sub: payload.sub,
-            email: payload.email,
-            username: payload.username,
-          });
-        }
-      } catch (e) {
-        console.error("❌ 解析Auth0 token失败:", e);
-      }
-
-      // 使用邮箱信息向服务器换取token
-      try {
-        console.log("📝 确保localStorage中有正确的认证信息...");
-
-        // 先清理旧的认证信息
-        localStorage.removeItem("diflow_cloud_token");
-        localStorage.removeItem("diflow_user_email");
-
-        // 调用服务器的email登录接口
-        const response = await authApi.emailLogin(
-          cursorUserInfo.email,
-          cursorUserInfo.username || cursorUserInfo.email.split("@")[0],
-          auth0TokenPayload?.sub || "",
-          cursorUserInfo.avatar || "",
-        );
-
-        if (
-          response &&
-          response.data &&
-          typeof response.data === "object" &&
-          "access_token" in response.data
-        ) {
-          console.log("✅ 成功获取服务器token");
-          const accessToken = (response.data as any).access_token;
-
-          // 保存新的认证信息
-          localStorage.setItem("diflow_cloud_token", accessToken);
-          localStorage.setItem("diflow_user_email", cursorUserInfo.email);
-
-          // 更新用户状态
-          userInfo.value = {
-            isLoggedIn: true,
-            token: accessToken,
-            email: cursorUserInfo.email,
-            username: cursorUserInfo.username || "",
-            cursorUserId: auth0TokenPayload?.sub || "",
-            avatar: cursorUserInfo.avatar || "",
-          };
-
-          console.log("🔍 验证localStorage中的认证信息:");
-          console.log(
-            "  - savedToken:",
-            localStorage.getItem("diflow_cloud_token")
-              ? `${localStorage
-                  .getItem("diflow_cloud_token")!
-                  .substring(0, 20)}...`
-              : "null",
-          );
-          console.log(
-            "  - savedEmail:",
-            localStorage.getItem("diflow_user_email"),
-          );
-          console.log(
-            "  - token匹配:",
-            localStorage.getItem("diflow_cloud_token") === accessToken,
-          );
-
-          return;
-        } else {
-          console.error("❌ 服务器返回无效的token响应:", response);
-        }
-      } catch (error) {
-        console.error("❌ token交换失败:", error);
-        // 清理无效的登录状态
-        localStorage.removeItem("diflow_cloud_token");
-        localStorage.removeItem("diflow_user_email");
-        userInfo.value = {
-          isLoggedIn: false,
-          token: null,
-          email: null,
-          username: "",
-          cursorUserId: "",
-          avatar: "",
-        };
-        return;
-      }
-    }
-
-    // 如果已有有效的服务器token，验证其有效性
-    if (savedToken && savedEmail === cursorUserInfo.email) {
-      console.log("🔍 验证现有服务器token...");
-
-      try {
-        // 尝试解码token检查是否过期
-        const tokenParts = savedToken.split(".");
-        if (tokenParts.length === 3) {
-          const payload = JSON.parse(atob(tokenParts[1]));
-          const currentTime = Math.floor(Date.now() / 1000);
-          const isExpired = payload.exp && payload.exp < currentTime;
-
-          if (isExpired) {
-            console.log("❌ 服务器token已过期，重新获取");
-            localStorage.removeItem("diflow_cloud_token");
-            localStorage.removeItem("diflow_user_email");
-            // 递归调用重新获取token
-            return await checkCloudLoginStatus();
-          }
-        }
-
-        // Token有效，更新用户状态
+        // 更新用户状态
         userInfo.value = {
           isLoggedIn: true,
-          token: savedToken,
           email: cursorUserInfo.email,
           username: cursorUserInfo.username || "",
           cursorUserId: cursorUserInfo.cursorUserId || "",
           avatar: cursorUserInfo.avatar || "",
+          token: accessToken,
         };
-        console.log("✅ 使用现有有效token");
         return;
-      } catch (error) {
-        console.error("❌ 验证token失败:", error);
-        localStorage.removeItem("diflow_cloud_token");
-        localStorage.removeItem("diflow_user_email");
+      } else {
+        console.error("❌ 服务器返回无效响应:", response);
       }
+    } catch (error) {
+      console.error("❌ 登录失败:", error);
     }
 
-    // 如果没有有效token，设置为未登录状态
+    // 登录失败，设置为未登录状态
     userInfo.value = {
       isLoggedIn: false,
-      token: null,
-      email: null,
+      email: "",
       username: "",
       cursorUserId: "",
       avatar: "",
+      token: "",
     };
   } catch (error) {
     console.error("❌ 检查云端登录状态失败:", error);
     userInfo.value = {
       isLoggedIn: false,
-      token: null,
-      email: null,
+      email: "",
       username: "",
       cursorUserId: "",
       avatar: "",
+      token: "",
     };
   }
 };
@@ -961,9 +820,10 @@ const handleSyncRulesToCloud = async () => {
     // 格式化规则数据
     const rules: RuleItem[] = [
       {
-        ruleName: "cursor_rules",
-        ruleContent: currentRules,
-        sortOrder: 1,
+        name: "cursor_rules",
+        content: currentRules,
+        order: 1,
+        enabled: true,
       },
     ];
 
