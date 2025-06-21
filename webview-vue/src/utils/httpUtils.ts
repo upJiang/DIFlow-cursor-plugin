@@ -31,8 +31,18 @@ export const httpRequest = async (
     // 构建完整的 URL
     const fullUrl = url.startsWith("http") ? url : `${BASE_URL}${url}`;
 
-    // 简化的请求头处理
+    // 自动获取JWT token并添加到请求头
     const mergedHeaders = { ...headers };
+
+    // 尝试从localStorage获取token
+    const token = localStorage.getItem("diflow_cloud_token");
+    if (token && !mergedHeaders.Authorization) {
+      mergedHeaders.Authorization = `Bearer ${token}`;
+      console.log(
+        "自动添加Authorization头:",
+        `Bearer ${token.substring(0, 20)}...`,
+      );
+    }
 
     // 在webview环境中使用VS Code扩展代理
     if (isWebviewEnvironment()) {

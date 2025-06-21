@@ -16,6 +16,25 @@
           @check-status="checkSystemStatus"
           @show-custom-path="showCustomPathModal"
           @load-user-info="loadUserInfo"
+          @sync-to-cloud="handleSyncAllData"
+        />
+
+        <CloudSync
+          v-else-if="item.key === 'sync'"
+          :user-info="userInfo"
+          :sync-info="syncInfo"
+          :sync-logs="syncLogs"
+          :loading="loading"
+          @sync-data="handleSyncData"
+          @toggle-auto-sync="toggleAutoSync"
+          @login-user="handleLoginUser"
+          @logout-user="handleLogoutUser"
+          @sync-all-data="handleSyncAllData"
+          @sync-rules-to-cloud="handleSyncRulesToCloud"
+          @sync-rules-from-cloud="handleSyncRulesFromCloud"
+          @sync-mcp-to-cloud="handleSyncMcpToCloud"
+          @sync-mcp-from-cloud="handleSyncMcpFromCloud"
+          @clear-sync-logs="handleClearSyncLogs"
         />
 
         <RulesManagement
@@ -39,36 +58,13 @@
           @remove-server="removeMcpServer"
         />
 
-        <CloudSync
-          v-else-if="item.key === 'sync'"
-          :user-info="userInfo"
-          :sync-info="syncInfo"
-          :sync-logs="syncLogs"
-          :loading="loading"
-          @sync-data="handleSyncData"
-          @toggle-auto-sync="toggleAutoSync"
-          @login-user="handleLoginUser"
-          @logout-user="handleLogoutUser"
-          @sync-all-data="handleSyncAllData"
-          @sync-rules-to-cloud="handleSyncRulesToCloud"
-          @sync-rules-from-cloud="handleSyncRulesFromCloud"
-          @sync-mcp-to-cloud="handleSyncMcpToCloud"
-          @sync-mcp-from-cloud="handleSyncMcpFromCloud"
-          @clear-sync-logs="handleClearSyncLogs"
-        />
-
         <QuickChat
           v-else-if="item.key === 'chat'"
           :user-info="userInfo"
           :loading="loading"
-          :chat-message="''"
-        />
-
-        <ServerTest
-          v-else-if="item.key === 'test'"
-          :test-logs="testLogs"
-          :loading="loading"
-          @test-server="testServerConnection"
+          v-model:chat-message="chatMessage"
+          @send-to-chat="handleSendToChat"
+          @open-chat="handleOpenChat"
         />
       </a-tab-pane>
     </a-tabs>
@@ -136,26 +132,18 @@
 
 <script setup lang="ts">
 import { message } from "ant-design-vue";
-import { nextTick, onMounted, reactive, ref } from "vue";
-import { useRouter } from "vue-router";
+import { onMounted, reactive, ref } from "vue";
 
-import { authApi } from "@/api/auth";
-import { handleApiError, httpRequest } from "@/utils/httpUtils";
-import { sendTaskToVscode } from "@/utils/vscodeUtils";
-
+import { authApi } from "../../api/auth";
 import { mcpApi, type McpServerItem } from "../../api/mcp";
 import { type RuleItem, rulesApi } from "../../api/rules";
-import {
-  authService,
-  mcpService,
-  userService,
-} from "../../services/pluginService";
+import { mcpService, userService } from "../../services/pluginService";
+import { sendTaskToVscode } from "../../utils/vscodeUtils";
 import BasicInfo from "./components/BasicInfo.vue";
 import CloudSync from "./components/CloudSync.vue";
 import McpManagement from "./components/McpManagement.vue";
 import QuickChat from "./components/QuickChat.vue";
 import RulesManagement from "./components/RulesManagement.vue";
-import ServerTest from "./components/ServerTest.vue";
 import {
   createInitialState,
   createLogAdder,
@@ -163,6 +151,13 @@ import {
   handleSystemCheck,
   handleUserInfoLoad,
 } from "./utils/cursorUtils";
+
+// 定义用户信息类型 - 根据auth服务返回的字段
+interface UserInfo {
+  isLoggedIn: boolean;
+  token: string;
+  email: string;
+}
 
 // 响应式数据
 const activeTab = ref("basic");
@@ -175,6 +170,8 @@ const customPath = reactive({
 
 // 新增：规则和MCP数据
 const cursorRules = ref("");
+// 新增：聊天消息状态
+const chatMessage = ref("");
 
 interface McpServer {
   name: string;
@@ -192,17 +189,17 @@ interface McpConfig {
 interface CloudRulesResponse {
   rules?: Array<{
     id: number;
-    ruleName: string;
-    ruleContent: string;
-    sortOrder: number;
-    isEnabled: boolean;
+    name: string;
+    content: string;
+    order: number;
+    enabled: boolean;
   }>;
 }
 
 interface CloudMcpResponse {
   mcps?: Array<{
     id: number;
-    serverName: string;
+    name: string;
     command: string;
     args?: string[];
     env?: Record<string, string>;
@@ -221,13 +218,10 @@ const newMcpServer = reactive({
 // 使用工具函数创建初始状态
 const state = createInitialState();
 const systemInfo = reactive(state.systemInfo);
-const userInfo = ref({
+const userInfo = ref<UserInfo>({
   isLoggedIn: false,
-  token: null as string | null,
-  email: null as string | null,
-  username: "",
-  cursorUserId: "",
-  avatar: "",
+  token: "",
+  email: "",
 });
 const syncInfo = reactive(state.syncInfo);
 const loading = reactive(state.loading);
@@ -248,7 +242,7 @@ const checkSystemStatus = () => {
 
 // 用户信息加载
 const loadUserInfo = () => {
-  handleUserInfoLoad(loading, userInfo, addTestLog);
+  handleUserInfoLoad(loading, userInfo.value, addTestLog);
 };
 
 // 显示自定义路径模态框
@@ -278,6 +272,10 @@ const checkCloudLoginStatus = async () => {
   try {
     console.log("🔍 检查云端登录状态...");
 
+    // 每次进入都重置缓存，确保重新登录
+    localStorage.removeItem("diflow_cloud_token");
+    localStorage.removeItem("diflow_user_email");
+
     // 获取当前Cursor用户信息
     const cursorUserInfo = await sendTaskToVscode("getCursorUserInfo", {});
     console.log("当前Cursor用户信息:", cursorUserInfo);
@@ -287,9 +285,6 @@ const checkCloudLoginStatus = async () => {
       userInfo.value = {
         isLoggedIn: false,
         email: "",
-        username: "",
-        cursorUserId: "",
-        avatar: "",
         token: "",
       };
       return;
@@ -320,11 +315,14 @@ const checkCloudLoginStatus = async () => {
         userInfo.value = {
           isLoggedIn: true,
           email: cursorUserInfo.email,
-          username: cursorUserInfo.username || "",
-          cursorUserId: cursorUserInfo.cursorUserId || "",
-          avatar: cursorUserInfo.avatar || "",
           token: accessToken,
         };
+
+        // 只保存邮箱和token到localStorage供httpUtils使用
+        localStorage.setItem("diflow_cloud_token", accessToken);
+        localStorage.setItem("diflow_user_email", cursorUserInfo.email);
+
+        console.log("✅ 用户邮箱和token已保存到缓存");
         return;
       } else {
         console.error("❌ 服务器返回无效响应:", response);
@@ -337,9 +335,6 @@ const checkCloudLoginStatus = async () => {
     userInfo.value = {
       isLoggedIn: false,
       email: "",
-      username: "",
-      cursorUserId: "",
-      avatar: "",
       token: "",
     };
   } catch (error) {
@@ -347,9 +342,6 @@ const checkCloudLoginStatus = async () => {
     userInfo.value = {
       isLoggedIn: false,
       email: "",
-      username: "",
-      cursorUserId: "",
-      avatar: "",
       token: "",
     };
   }
@@ -387,54 +379,33 @@ const handleLoginUser = () => {
 const handleLogoutUser = () => {
   console.log("处理用户退出...");
 
-  // 清除localStorage中的认证信息
+  // 只清除邮箱和token缓存
   localStorage.removeItem("diflow_cloud_token");
   localStorage.removeItem("diflow_user_email");
 
   // 清除userInfo
   userInfo.value = {
     isLoggedIn: false,
-    token: null,
-    email: null,
-    username: "",
-    cursorUserId: "",
-    avatar: "",
+    token: "",
+    email: "",
   };
 
   addSyncLog("用户已退出登录", "success");
 };
 
-/**
- * 测试服务器连接 - ServerTest组件需要的函数
- */
-const testServerConnection = async () => {
-  console.log("测试服务器连接...");
-  addTestLog("开始测试服务器连接...", "info");
-
-  try {
-    // 测试基本连接
-    const response = await httpRequest("GET", "/health");
-    if (response) {
-      addTestLog("服务器连接测试成功", "success");
-    } else {
-      addTestLog("服务器连接测试失败", "error");
-    }
-  } catch (error) {
-    addTestLog(`服务器连接测试失败: ${error}`, "error");
-  }
-};
-
 // 新增：规则管理功能
 const loadRules = async () => {
   loading.load = true;
-  addTestLog("开始加载规则...", "info");
+  addTestLog("开始加载本地规则...", "info");
 
   try {
     const result = await sendTaskToVscode("getUserRules");
     cursorRules.value = result || "";
-    addTestLog("规则加载成功", "success");
+    addTestLog("本地规则加载成功", "success");
+    message.success("本地规则加载成功");
   } catch (error) {
-    addTestLog(`规则加载失败: ${error}`, "error");
+    addTestLog(`本地规则加载失败: ${error}`, "error");
+    message.error(`本地规则加载失败: ${error}`);
   } finally {
     loading.load = false;
   }
@@ -442,13 +413,15 @@ const loadRules = async () => {
 
 const saveRules = async () => {
   loading.save = true;
-  addTestLog("开始保存规则...", "info");
+  addTestLog("开始保存规则到本地...", "info");
 
   try {
     await sendTaskToVscode("updateUserRules", { rules: cursorRules.value });
-    addTestLog("规则保存成功", "success");
+    addTestLog("规则保存到本地成功", "success");
+    message.success("规则已保存到本地 Cursor 配置");
   } catch (error) {
     addTestLog(`规则保存失败: ${error}`, "error");
+    message.error(`规则保存失败: ${error}`);
   } finally {
     loading.save = false;
   }
@@ -456,127 +429,35 @@ const saveRules = async () => {
 
 const clearRules = async () => {
   loading.clear = true;
-  addTestLog("开始清空规则...", "info");
+  addTestLog("开始清空本地规则...", "info");
 
   try {
     cursorRules.value = "";
     await sendTaskToVscode("updateUserRules", { rules: "" });
-    addTestLog("规则清空成功", "success");
+    addTestLog("本地规则清空成功", "success");
+    message.success("本地规则已清空");
   } catch (error) {
     addTestLog(`规则清空失败: ${error}`, "error");
+    message.error(`规则清空失败: ${error}`);
   } finally {
     loading.clear = false;
   }
 };
 
-/**
- * 同步MCP服务器到数据库
- */
-const syncMcpServersToDatabase = async () => {
-  // 检查登录状态
-  const cloudToken = localStorage.getItem("diflow_cloud_token");
-  const cloudEmail = localStorage.getItem("diflow_user_email");
-
-  if (!cloudToken || !cloudEmail) {
-    addTestLog("用户未登录，跳过数据库同步", "info");
-    return;
-  }
-
-  try {
-    // 将当前MCP服务器列表转换为数据库格式
-    const mcpsForDatabase = mcpServers.value.map((server, index) => ({
-      serverName: server.name,
-      command: server.command,
-      args: server.args || [],
-      env: server.env || {},
-      sortOrder: index + 1,
-    }));
-
-    const result = await mcpService.saveMcpServers(mcpsForDatabase);
-
-    if (result.success) {
-      addTestLog("MCP配置已同步到数据库", "success");
-    } else {
-      const errorMsg = "message" in result ? result.message : "未知错误";
-      addTestLog(`数据库同步失败: ${errorMsg}`, "error");
-    }
-  } catch (error) {
-    addTestLog(`数据库同步异常: ${error}`, "error");
-  }
-};
-
-/**
- * 从数据库加载MCP服务器配置
- */
-const loadMcpServersFromDatabase = async (): Promise<McpServer[]> => {
-  console.log("🔍 开始从数据库加载MCP服务器配置...");
-
-  // 优先检查userInfo中的登录状态
-  console.log("🔍 数据库加载检查:");
-  console.log("  - userInfo.isLoggedIn:", userInfo.value.isLoggedIn);
-  console.log(
-    "  - userInfo.token:",
-    userInfo.value.token
-      ? `${userInfo.value.token.substring(0, 20)}...`
-      : "null",
-  );
-  console.log("  - userInfo.email:", userInfo.value.email);
-
-  if (
-    !userInfo.value.isLoggedIn ||
-    !userInfo.value.token ||
-    !userInfo.value.email
-  ) {
-    console.log("⚠️ 用户未登录，跳过数据库加载");
-    addTestLog("用户未登录，跳过数据库加载", "info");
-    return [];
-  }
-
-  console.log("✅ 用户已登录，开始从数据库获取MCP配置");
-
-  try {
-    const result = await mcpService.getMcpServers();
-    console.log("🔍 数据库查询结果:", result);
-
-    if (result.success && "data" in result && result.data) {
-      const responseData = result.data as CloudMcpResponse;
-      console.log("🔍 解析后的响应数据:", responseData);
-
-      if (responseData.mcps) {
-        console.log(`✅ 从数据库加载到 ${responseData.mcps.length} 个MCP配置`);
-        addTestLog("从数据库加载MCP配置成功", "success");
-        return responseData.mcps.map(
-          (mcp): McpServer => ({
-            name: mcp.serverName,
-            command: mcp.command,
-            args: mcp.args ?? [],
-            env: mcp.env ?? {},
-          }),
-        );
-      }
-    }
-    console.log("⚠️ 数据库中无MCP配置");
-    addTestLog("数据库中无MCP配置", "info");
-    return [];
-  } catch (error) {
-    console.log("❌ 从数据库加载MCP配置失败:", error);
-    addTestLog(`从数据库加载MCP配置失败: ${error}`, "error");
-    return [];
-  }
-};
-
-// 修改：MCP管理功能
+// 修改：MCP管理功能 - 只操作本地配置
 const loadMcpServers = async () => {
   loading.mcp = true;
-  addTestLog("开始加载MCP服务器...", "info");
+  addTestLog("开始加载本地MCP服务器...", "info");
 
   try {
-    // 1. 从本地配置文件加载
+    // 只从本地配置文件加载
     const localResult = await sendTaskToVscode("getMcpServers");
     let localServers: McpServer[] = [];
 
     if (localResult && typeof localResult === "object") {
-      localServers = Object.entries(localResult).map(
+      localServers = Object.entries(
+        localResult as Record<string, McpConfig>,
+      ).map(
         ([name, config]: [string, McpConfig]): McpServer => ({
           name,
           command: config.command,
@@ -586,29 +467,17 @@ const loadMcpServers = async () => {
       );
     }
 
-    // 2. 从数据库加载（如果用户已登录）
-    const databaseServers = await loadMcpServersFromDatabase();
-
-    // 3. 合并本地和数据库配置（优先使用本地配置）
-    const serverMap = new Map<string, McpServer>();
-
-    // 先添加数据库配置
-    databaseServers.forEach((server) => {
-      serverMap.set(server.name, server);
-    });
-
-    // 再添加本地配置（会覆盖同名的数据库配置）
-    localServers.forEach((server) => {
-      serverMap.set(server.name, server);
-    });
-
-    mcpServers.value = Array.from(serverMap.values());
+    mcpServers.value = localServers;
     addTestLog(
-      `MCP服务器加载成功，共${mcpServers.value.length}个服务器`,
+      `本地MCP服务器加载成功，共${mcpServers.value.length}个服务器`,
       "success",
     );
+    message.success(
+      `本地MCP服务器加载成功，共${mcpServers.value.length}个服务器`,
+    );
   } catch (error) {
-    addTestLog(`MCP服务器加载失败: ${error}`, "error");
+    addTestLog(`本地MCP服务器加载失败: ${error}`, "error");
+    message.error(`本地MCP服务器加载失败: ${error}`);
   } finally {
     loading.mcp = false;
   }
@@ -626,6 +495,7 @@ const showAddMcpModal = () => {
 const handleAddMcpServer = async () => {
   if (!newMcpServer.name || !newMcpServer.command) {
     addTestLog("请填写服务器名称和命令", "error");
+    message.error("请填写服务器名称和命令");
     return;
   }
 
@@ -651,38 +521,36 @@ const handleAddMcpServer = async () => {
       env,
     };
 
-    // 1. 更新本地配置文件
+    // 更新本地配置文件
     await sendTaskToVscode("addMcpServer", {
       name: newMcpServer.name,
       config,
     });
 
-    addTestLog("MCP服务器本地配置添加成功", "success");
+    addTestLog("MCP服务器添加到本地配置成功", "success");
+    message.success(`MCP服务器 "${newMcpServer.name}" 已添加到本地配置`);
     showMcpModal.value = false;
 
-    // 2. 重新加载服务器列表
+    // 重新加载服务器列表
     await loadMcpServers();
-
-    // 3. 同步到数据库
-    await syncMcpServersToDatabase();
   } catch (error) {
     addTestLog(`MCP服务器添加失败: ${error}`, "error");
+    message.error(`MCP服务器添加失败: ${error}`);
   }
 };
 
 const removeMcpServer = async (name: string) => {
   try {
-    // 1. 从本地配置文件删除
+    // 从本地配置文件删除
     await sendTaskToVscode("removeMcpServer", { name });
-    addTestLog(`MCP服务器 ${name} 本地配置删除成功`, "success");
+    addTestLog(`MCP服务器 ${name} 从本地配置删除成功`, "success");
+    message.success(`MCP服务器 "${name}" 已从本地配置删除`);
 
-    // 2. 重新加载服务器列表
+    // 重新加载服务器列表
     await loadMcpServers();
-
-    // 3. 同步到数据库
-    await syncMcpServersToDatabase();
   } catch (error) {
     addTestLog(`MCP服务器删除失败: ${error}`, "error");
+    message.error(`MCP服务器删除失败: ${error}`);
   }
 };
 
@@ -730,7 +598,7 @@ const handleSyncAllData = async () => {
       if (isExpired) {
         addSyncLog("Token已过期，请重新登录", "error");
         // 清除过期的token
-        userInfo.value.token = null;
+        userInfo.value.token = "";
         userInfo.value.isLoggedIn = false;
         localStorage.removeItem("diflow_cloud_token");
         return;
@@ -740,7 +608,6 @@ const handleSyncAllData = async () => {
     console.log("  - Token用户信息:", {
       sub: decodedToken.payload.sub,
       email: decodedToken.payload.email,
-      username: decodedToken.payload.username,
     });
   }
 
@@ -748,18 +615,6 @@ const handleSyncAllData = async () => {
   console.log("📝 确保localStorage中有正确的认证信息...");
   localStorage.setItem("diflow_cloud_token", userInfo.value.token);
   localStorage.setItem("diflow_user_email", userInfo.value.email);
-  if (userInfo.value.username) {
-    localStorage.setItem("diflow_cloud_username", userInfo.value.username);
-  }
-  if (userInfo.value.cursorUserId) {
-    localStorage.setItem(
-      "diflow_cloud_cursor_user_id",
-      userInfo.value.cursorUserId,
-    );
-  }
-  if (userInfo.value.avatar) {
-    localStorage.setItem("diflow_cloud_avatar", userInfo.value.avatar);
-  }
 
   // 等待一小段时间确保localStorage写入完成
   await new Promise((resolve) => setTimeout(resolve, 100));
@@ -790,8 +645,14 @@ const handleSyncAllData = async () => {
     syncInfo.lastSyncTime = new Date();
     syncInfo.syncStatus = "已同步";
     addSyncLog("所有数据同步完成", "success");
+
+    // 添加明显的成功提示
+    console.log("🎉 DIFlow 同步完成！规则和MCP配置已成功同步到云端");
+    message.success("🎉 同步完成！数据已成功保存到云端", 3);
   } catch (error) {
     addSyncLog(`同步失败: ${error}`, "error");
+    console.error("❌ DIFlow 同步失败:", error);
+    message.error(`同步失败: ${error}`);
   } finally {
     loading.syncAll = false;
   }
@@ -833,9 +694,13 @@ const handleSyncRulesToCloud = async () => {
     if (result.success) {
       message.success("规则同步成功");
       addSyncLog("规则同步成功", "success");
+      syncInfo.rulesStatus = "synced"; // 更新同步状态
+      console.log("✅ DIFlow 规则同步成功");
     } else {
       message.error(result.message || "规则同步失败");
       addSyncLog(`规则同步失败: ${result.message}`, "error");
+      syncInfo.rulesStatus = "error"; // 更新同步状态
+      console.error("❌ DIFlow 规则同步失败:", result.message);
     }
   } catch (error) {
     console.error("同步规则失败:", error);
@@ -871,7 +736,7 @@ const handleSyncRulesFromCloud = async () => {
 
       if (cloudRules && cloudRules.length > 0) {
         // 2. 更新本地规则
-        const ruleContent = cloudRules[0].ruleContent;
+        const ruleContent = cloudRules[0].content;
         await sendTaskToVscode("updateUserRules", { rules: ruleContent });
 
         // 3. 更新界面显示
@@ -917,10 +782,10 @@ const handleSyncMcpToCloud = async () => {
     }
 
     // 格式化MCP数据 - 确保是纯数据对象，避免DataCloneError
-    const mcps: McpServerItem[] = mcpServers.value.map((server, index) => {
+    const mcps: McpServerItem[] = mcpServers.value.map((server) => {
       // 创建纯数据对象，避免任何可能的函数或不可序列化内容
       const cleanServer: McpServerItem = {
-        serverName: String(server.name || ""),
+        name: String(server.name || ""),
         command: String(server.command || ""),
         args: Array.isArray(server.args)
           ? server.args.map((arg) => String(arg))
@@ -934,7 +799,8 @@ const handleSyncMcpToCloud = async () => {
                 ]),
               )
             : {},
-        sortOrder: index + 1,
+        description: "",
+        enabled: true,
       };
       return cleanServer;
     });
@@ -947,9 +813,13 @@ const handleSyncMcpToCloud = async () => {
     if (result.success) {
       message.success("MCP配置同步成功");
       addSyncLog("MCP配置同步成功", "success");
+      syncInfo.mcpStatus = "synced"; // 更新同步状态
+      console.log("✅ DIFlow MCP配置同步成功");
     } else {
       message.error(result.message || "MCP配置同步失败");
       addSyncLog(`MCP配置同步失败: ${result.message}`, "error");
+      syncInfo.mcpStatus = "error"; // 更新同步状态
+      console.error("❌ DIFlow MCP配置同步失败:", result.message);
     }
   } catch (error) {
     console.error("同步MCP配置失败:", error);
@@ -989,7 +859,7 @@ const handleSyncMcpFromCloud = async () => {
         // 2. 转换为本地格式
         const mcpConfig: Record<string, McpConfig> = {};
         cloudMcps.forEach((mcp) => {
-          mcpConfig[mcp.serverName] = {
+          mcpConfig[mcp.name] = {
             command: mcp.command,
             args: mcp.args ?? [],
             env: mcp.env ?? {},
@@ -1030,6 +900,71 @@ const handleClearSyncLogs = () => {
 };
 
 /**
+ * 发送消息到Cursor Chat
+ */
+const handleSendToChat = async () => {
+  if (!chatMessage.value.trim()) {
+    message.warning("请输入要发送的消息");
+    return;
+  }
+
+  loading.chat = true;
+  addTestLog("正在发送消息到 Cursor Chat...", "info");
+
+  try {
+    // 调用VS Code命令发送消息到Cursor Chat
+    const result = await sendTaskToVscode("sendToCursorChat", {
+      message: chatMessage.value.trim(),
+    });
+
+    console.log("发送消息到Chat的结果:", result);
+
+    // 检查结果
+    if (result === true || (result && result.success !== false)) {
+      addTestLog("消息已发送到 Cursor Chat", "success");
+      message.success("消息已发送到 Cursor Chat");
+      // 清空输入框
+      chatMessage.value = "";
+    } else {
+      addTestLog("发送消息失败，请检查 Cursor Chat 是否可用", "error");
+      message.error("发送消息失败，请检查 Cursor Chat 是否可用");
+    }
+  } catch (error) {
+    console.error("发送消息到Chat时出错:", error);
+    addTestLog(`发送失败: ${error}`, "error");
+    message.error(`发送失败: ${error}`);
+  } finally {
+    loading.chat = false;
+  }
+};
+
+/**
+ * 打开Cursor Chat界面
+ */
+const handleOpenChat = async () => {
+  loading.openChat = true;
+  addTestLog("正在打开 Cursor Chat...", "info");
+
+  try {
+    // 调用VS Code命令打开Cursor Chat
+    const result = await sendTaskToVscode("openCursorChat", {});
+
+    if (result && result.success) {
+      addTestLog("Cursor Chat 已打开", "success");
+      message.success("Cursor Chat 已打开");
+    } else {
+      addTestLog("无法自动打开 Cursor Chat，请手动打开", "info");
+      message.warning("无法自动打开 Cursor Chat，请手动打开");
+    }
+  } catch (error) {
+    addTestLog(`打开 Cursor Chat 失败: ${error}`, "error");
+    message.error(`打开 Cursor Chat 失败: ${error}`);
+  } finally {
+    loading.openChat = false;
+  }
+};
+
+/**
  * 解码JWT token以便调试
  */
 const decodeJWT = (token: string) => {
@@ -1055,23 +990,6 @@ const decodeJWT = (token: string) => {
     };
   } catch (error) {
     return { error: `JWT decode failed: ${error}` };
-  }
-};
-
-/**
- * 简单的JWT解码函数
- */
-const jwt_decode = (token: string) => {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) {
-      throw new Error("Invalid JWT format");
-    }
-    const payload = parts[1];
-    const paddedPayload = payload + "=".repeat((4 - (payload.length % 4)) % 4);
-    return JSON.parse(atob(paddedPayload));
-  } catch (error) {
-    throw new Error(`JWT decode failed: ${error}`);
   }
 };
 

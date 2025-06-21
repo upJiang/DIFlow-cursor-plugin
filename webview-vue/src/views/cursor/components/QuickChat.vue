@@ -5,7 +5,7 @@
         <a-space direction="vertical" style="width: 100%">
           <div class="chat-input">
             <a-textarea
-              :value="chatMessage"
+              :value="props.chatMessage"
               @update:value="$emit('update:chatMessage', $event)"
               placeholder="输入要发送到 Cursor Chat 的消息..."
               :rows="8"
@@ -19,21 +19,17 @@
               <a-button
                 type="primary"
                 @click="$emit('sendToChat')"
-                :loading="loading.chat"
+                :loading="props.loading.chat"
               >
                 <template #icon><MessageOutlined /></template>
                 发送到 Chat
               </a-button>
-              <a-button @click="$emit('openChat')" :loading="loading.openChat">
+              <a-button
+                @click="$emit('openChat')"
+                :loading="props.loading.openChat"
+              >
                 <template #icon><CommentOutlined /></template>
                 打开 Chat
-              </a-button>
-              <a-button
-                @click="$emit('openCursor')"
-                :loading="loading.openCursor"
-              >
-                <template #icon><AppstoreOutlined /></template>
-                打开 Cursor
               </a-button>
             </a-space>
           </div>
@@ -54,11 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import {
-  AppstoreOutlined,
-  CommentOutlined,
-  MessageOutlined,
-} from "@ant-design/icons-vue";
+import { CommentOutlined, MessageOutlined } from "@ant-design/icons-vue";
 
 interface Props {
   chatMessage: string;
@@ -69,7 +61,7 @@ interface Props {
   };
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 defineEmits<{
   sendToChat: [];

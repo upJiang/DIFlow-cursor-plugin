@@ -5,14 +5,17 @@
         <a-space direction="vertical" style="width: 100%">
           <div class="rules-header">
             <a-space>
-              <a-button @click="$emit('loadRules')" :loading="loading.load">
+              <a-button
+                @click="$emit('loadRules')"
+                :loading="props.loading.load"
+              >
                 <template #icon><ReloadOutlined /></template>
                 刷新规则
               </a-button>
               <a-button
                 type="primary"
                 @click="$emit('saveRules')"
-                :loading="loading.save"
+                :loading="props.loading.save"
               >
                 <template #icon><SaveOutlined /></template>
                 保存规则
@@ -20,7 +23,7 @@
               <a-button
                 danger
                 @click="$emit('clearRules')"
-                :loading="loading.clear"
+                :loading="props.loading.clear"
               >
                 <template #icon><DeleteOutlined /></template>
                 清空规则
@@ -30,7 +33,7 @@
 
           <div class="rules-editor">
             <a-textarea
-              :value="cursorRules"
+              :value="props.cursorRules"
               @update:value="$emit('update:cursorRules', $event)"
               placeholder="在此编辑 .cursorrules 文件内容..."
               :rows="15"
@@ -69,7 +72,7 @@ interface Props {
   };
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 defineEmits<{
   loadRules: [];

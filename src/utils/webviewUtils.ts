@@ -49,7 +49,7 @@ export const showWebView = (
     key: WebViewKeys; // webview key
     title?: string; // webview 标题
     viewColumn?: vscode.ViewColumn; // one 为左侧，two为右侧
-    task?: { task: Tasks; data?: any }; // webview 打开后执行命令，比如转到指定路由
+    task?: { task: Tasks; data?: unknown }; // webview 打开后执行命令，比如转到指定路由
   }
 ) => {
   // 先判断，webview是否存在了，存在了则不新增，传递消息给webview处理后续
@@ -92,7 +92,7 @@ export const showWebView = (
       async (message: {
         cmd: string;
         cbid: string;
-        data: any;
+        data: unknown;
         skipError?: boolean;
       }) => {
         // 监听webview反馈回来加载完成，初始化主动推送消息
@@ -138,6 +138,17 @@ export const showWebView = (
       panel,
       disposables,
     });
+
+    // 如果有任务，执行任务
+    if (options.task) {
+      setTimeout(() => {
+        panel.webview.postMessage({
+          cmd: "vscodePushTask",
+          task: options.task!.task,
+          data: options.task!.data,
+        });
+      }, 500);
+    }
   }
 };
 
@@ -192,15 +203,85 @@ const getWebviewContent = (srcUri: string | vscode.Uri) => {
     </html>`;
 };
 
-// 任务列表，在此处分发任务
-const taskMap: Record<string, any> = {
-  addSnippets: snippet.addSnippets,
+/**
+ * 任务消息接口
+ */
+interface TaskMessage {
+  cbid?: string;
+  data?: unknown;
+}
+
+/**
+ * 类型安全的数据访问辅助函数
+ */
+function getTaskData(data: unknown): Record<string, unknown> {
+  return data && typeof data === "object" && data !== null
+    ? (data as Record<string, unknown>)
+    : {};
+}
+
+/**
+ * 任务处理器接口
+ */
+interface TaskHandler {
+  (context: vscode.ExtensionContext, message: TaskMessage): Promise<void>;
+}
+
+/**
+ * 任务映射表
+ */
+const taskMap: Record<string, TaskHandler> = {};
+
+// 添加更新用户规则任务
+taskMap.updateUserRules = async (
+  context: vscode.ExtensionContext,
+  message: TaskMessage
+) => {
+  try {
+    console.log("更新用户规则...", message.data);
+    const data = message.data as { rules?: string };
+    const rules = data?.rules;
+    if (typeof rules !== "string") {
+      throw new Error("规则内容必须是字符串类型");
+    }
+    const result = await cursorIntegration.updateUserRules(rules);
+    console.log("更新用户规则结果:", result);
+
+    // 发送结果回 webview - 修复返回格式
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: true,
+          data: result, // 前端期望在 result.data 中获取实际结果
+        },
+      });
+    }
+  } catch (error: unknown) {
+    console.error("updateUserRules task failed:", error);
+    // 发送错误回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+    }
+  }
 };
 
-// 初始化 Cursor 任务处理器
+// 添加获取 Cursor 设置任务
 taskMap.getCursorSettings = async (
   context: vscode.ExtensionContext,
-  message: any
+  message: TaskMessage
 ) => {
   try {
     console.log("获取 Cursor 设置...");
@@ -220,7 +301,7 @@ taskMap.getCursorSettings = async (
         },
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("getCursorSettings task failed:", error);
     // 发送错误回 webview
     const panels = webviewPanelList.filter(
@@ -231,7 +312,7 @@ taskMap.getCursorSettings = async (
         cbid: message.cbid,
         data: {
           success: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         },
       });
     }
@@ -278,15 +359,49 @@ taskMap.updateCursorSettings = async (
   }
 };
 
+// 添加 snippet 任务处理器
+taskMap.addSnippets = async (
+  context: vscode.ExtensionContext,
+  message: TaskMessage
+) => {
+  try {
+    // 确保 message.data 包含必要的字段
+    const data = message.data;
+    if (!data || typeof data !== "object") {
+      throw new Error("缺少必要的数据");
+    }
+
+    // 类型断言确保数据结构正确
+    const snippetData = data as {
+      tips: string;
+      prefix: string;
+      body: string;
+      description: string;
+    };
+
+    if (
+      !snippetData.tips ||
+      !snippetData.prefix ||
+      !snippetData.body ||
+      !snippetData.description
+    ) {
+      throw new Error("缺少必要的代码片段字段");
+    }
+
+    await snippet.addSnippets(context, { data: snippetData });
+  } catch (error: unknown) {
+    console.error("addSnippets task failed:", error);
+  }
+};
+
 taskMap.openCursorChat = async (
   context: vscode.ExtensionContext,
-  message: any
+  message: TaskMessage
 ) => {
   try {
     console.log("打开 Cursor 聊天...", message.data);
-    const result = await cursorIntegration.openCursorChat(
-      message.data?.message
-    );
+    const data = message.data as { message?: string };
+    const result = await cursorIntegration.openCursorChat(data?.message);
     console.log("打开 Cursor 聊天结果:", result);
 
     // 发送结果回 webview - 修复返回格式
@@ -302,7 +417,7 @@ taskMap.openCursorChat = async (
         },
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("openCursorChat task failed:", error);
     // 发送错误回 webview
     const panels = webviewPanelList.filter(
@@ -313,7 +428,49 @@ taskMap.openCursorChat = async (
         cbid: message.cbid,
         data: {
           success: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+    }
+  }
+};
+
+// 添加发送消息到Cursor Chat的任务处理器
+taskMap.sendToCursorChat = async (
+  context: vscode.ExtensionContext,
+  message: TaskMessage
+) => {
+  try {
+    console.log("发送消息到 Cursor Chat...", message.data);
+    const data = message.data as { message?: string };
+    const result = await cursorIntegration.openCursorChat(data?.message);
+    console.log("发送消息到 Cursor Chat 结果:", result);
+
+    // 发送结果回 webview - 修复返回格式
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: result,
+          data: result,
+        },
+      });
+    }
+  } catch (error: unknown) {
+    console.error("sendToCursorChat task failed:", error);
+    // 发送错误回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
         },
       });
     }
@@ -322,7 +479,7 @@ taskMap.openCursorChat = async (
 
 taskMap.getMcpServers = async (
   context: vscode.ExtensionContext,
-  message: any
+  message: TaskMessage
 ) => {
   try {
     console.log("获取 MCP 服务器列表...");
@@ -342,7 +499,7 @@ taskMap.getMcpServers = async (
         },
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("getMcpServers task failed:", error);
     // 发送错误回 webview
     const panels = webviewPanelList.filter(
@@ -353,7 +510,7 @@ taskMap.getMcpServers = async (
         cbid: message.cbid,
         data: {
           success: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         },
       });
     }
@@ -362,12 +519,27 @@ taskMap.getMcpServers = async (
 
 taskMap.addMcpServer = async (
   context: vscode.ExtensionContext,
-  message: any
+  message: TaskMessage
 ) => {
   try {
     console.log("添加 MCP 服务器...", message.data);
-    const { name, config } = message.data;
-    const result = await cursorIntegration.addMcpServer(name, config);
+    const { name, config } = message.data || {};
+    if (!name || !config) {
+      throw new Error("缺少必要参数：name 或 config");
+    }
+
+    // 确保 config 包含必要的 command 字段
+    const mcpConfig = config as {
+      command: string;
+      args?: string[];
+      env?: Record<string, string>;
+      [key: string]: unknown;
+    };
+    if (!mcpConfig.command) {
+      throw new Error("MCP 配置缺少必要的 command 字段");
+    }
+
+    const result = await cursorIntegration.addMcpServer(name, mcpConfig);
     console.log("添加 MCP 服务器结果:", result);
 
     // 发送结果回 webview - 修复返回格式
@@ -383,7 +555,7 @@ taskMap.addMcpServer = async (
         },
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("addMcpServer task failed:", error);
     // 发送错误回 webview
     const panels = webviewPanelList.filter(
@@ -394,7 +566,7 @@ taskMap.addMcpServer = async (
         cbid: message.cbid,
         data: {
           success: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         },
       });
     }
@@ -403,11 +575,15 @@ taskMap.addMcpServer = async (
 
 taskMap.removeMcpServer = async (
   context: vscode.ExtensionContext,
-  message: any
+  message: TaskMessage
 ) => {
   try {
     console.log("删除 MCP 服务器...", message.data);
-    const result = await cursorIntegration.removeMcpServer(message.data.name);
+    const name = message.data?.name;
+    if (!name) {
+      throw new Error("缺少必要参数：name");
+    }
+    const result = await cursorIntegration.removeMcpServer(name);
     console.log("删除 MCP 服务器结果:", result);
 
     // 发送结果回 webview - 修复返回格式
@@ -423,7 +599,7 @@ taskMap.removeMcpServer = async (
         },
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("removeMcpServer task failed:", error);
     // 发送错误回 webview
     const panels = webviewPanelList.filter(
@@ -434,7 +610,7 @@ taskMap.removeMcpServer = async (
         cbid: message.cbid,
         data: {
           success: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         },
       });
     }
@@ -444,7 +620,7 @@ taskMap.removeMcpServer = async (
 // 添加获取用户规则任务
 taskMap.getUserRules = async (
   context: vscode.ExtensionContext,
-  message: any
+  message: TaskMessage
 ) => {
   try {
     console.log("获取用户规则...");
@@ -464,7 +640,7 @@ taskMap.getUserRules = async (
         },
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("getUserRules task failed:", error);
     // 发送错误回 webview
     const panels = webviewPanelList.filter(
@@ -475,48 +651,7 @@ taskMap.getUserRules = async (
         cbid: message.cbid,
         data: {
           success: false,
-          error: error.message,
-        },
-      });
-    }
-  }
-};
-
-// 添加更新用户规则任务
-taskMap.updateUserRules = async (
-  context: vscode.ExtensionContext,
-  message: any
-) => {
-  try {
-    console.log("更新用户规则...", message.data);
-    const success = await cursorIntegration.updateUserRules(message.data.rules);
-    console.log("更新用户规则结果:", success);
-
-    // 发送结果回 webview - 修复返回格式
-    const panels = webviewPanelList.filter(
-      (panel) => panel.key === "cursor" || panel.key === "main"
-    );
-    if (panels.length > 0 && message.cbid) {
-      panels[0].panel.webview.postMessage({
-        cbid: message.cbid,
-        data: {
-          success: true,
-          data: success, // 前端期望在 result.data 中获取实际结果
-        },
-      });
-    }
-  } catch (error: any) {
-    console.error("updateUserRules task failed:", error);
-    // 发送错误回 webview
-    const panels = webviewPanelList.filter(
-      (panel) => panel.key === "cursor" || panel.key === "main"
-    );
-    if (panels.length > 0 && message.cbid) {
-      panels[0].panel.webview.postMessage({
-        cbid: message.cbid,
-        data: {
-          success: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         },
       });
     }
@@ -603,10 +738,14 @@ taskMap.isCursorInstalled = async (
   }
 };
 
-taskMap.openCursor = async (context: vscode.ExtensionContext, message: any) => {
+taskMap.openCursor = async (
+  context: vscode.ExtensionContext,
+  message: TaskMessage
+) => {
   try {
     console.log("打开 Cursor...", message.data);
-    const result = await cursorIntegration.openCursor(message.data?.filePath);
+    const filePath = message.data?.filePath as string | undefined;
+    const result = await cursorIntegration.openCursor(filePath);
     console.log("打开 Cursor 结果:", result);
 
     // 发送结果回 webview - 修复返回格式
@@ -622,7 +761,7 @@ taskMap.openCursor = async (context: vscode.ExtensionContext, message: any) => {
         },
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("openCursor task failed:", error);
     // 发送错误回 webview
     const panels = webviewPanelList.filter(
@@ -633,7 +772,7 @@ taskMap.openCursor = async (context: vscode.ExtensionContext, message: any) => {
         cbid: message.cbid,
         data: {
           success: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         },
       });
     }
@@ -642,16 +781,16 @@ taskMap.openCursor = async (context: vscode.ExtensionContext, message: any) => {
 
 taskMap.setCustomInstallPath = async (
   context: vscode.ExtensionContext,
-  message: any
+  message: TaskMessage
 ) => {
   try {
     console.log("setCustomInstallPath 收到数据:", message.data);
 
     // 修复参数名称匹配问题
-    const customPath = message.data.path || message.data.customPath;
+    const customPath = message.data?.path || message.data?.customPath;
 
-    if (!customPath) {
-      throw new Error("未提供安装路径");
+    if (!customPath || typeof customPath !== "string") {
+      throw new Error("未提供有效的安装路径");
     }
 
     console.log("设置自定义安装路径:", customPath);
@@ -677,7 +816,7 @@ taskMap.setCustomInstallPath = async (
         },
       });
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("setCustomInstallPath task failed:", error);
     // 发送错误回 webview
     const panels = webviewPanelList.filter(
@@ -698,7 +837,7 @@ taskMap.setCustomInstallPath = async (
 // 获取 Cursor 用户信息任务处理器
 taskMap.getCursorUserInfo = async (
   context: vscode.ExtensionContext,
-  message: any
+  message: TaskMessage
 ) => {
   try {
     console.log("获取 Cursor 用户信息...");
@@ -718,7 +857,7 @@ taskMap.getCursorUserInfo = async (
         },
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("getCursorUserInfo task failed:", error);
     const panels = webviewPanelList.filter(
       (panel) => panel.key === "cursor" || panel.key === "main"
@@ -728,7 +867,7 @@ taskMap.getCursorUserInfo = async (
         cbid: message.cbid,
         data: {
           success: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         },
       });
     }
@@ -738,7 +877,7 @@ taskMap.getCursorUserInfo = async (
 // 检查 Cursor 登录状态任务处理器
 taskMap.isCursorLoggedIn = async (
   context: vscode.ExtensionContext,
-  message: any
+  message: TaskMessage
 ) => {
   try {
     console.log("检查 Cursor 登录状态...");
@@ -758,7 +897,7 @@ taskMap.isCursorLoggedIn = async (
         },
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("isCursorLoggedIn task failed:", error);
     const panels = webviewPanelList.filter(
       (panel) => panel.key === "cursor" || panel.key === "main"
@@ -768,7 +907,7 @@ taskMap.isCursorLoggedIn = async (
         cbid: message.cbid,
         data: {
           success: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         },
       });
     }
@@ -778,7 +917,7 @@ taskMap.isCursorLoggedIn = async (
 // 登录或创建用户任务处理器
 taskMap.loginOrCreateUser = async (
   context: vscode.ExtensionContext,
-  message: any
+  message: TaskMessage
 ) => {
   try {
     console.log("获取Cursor用户信息...", message.data);
@@ -821,7 +960,7 @@ taskMap.loginOrCreateUser = async (
 // 同步用户数据任务处理器 - 简化为只返回成功状态
 taskMap.syncUserData = async (
   context: vscode.ExtensionContext,
-  message: any
+  message: TaskMessage
 ) => {
   try {
     console.log("同步用户数据任务 - 由webview处理", message.data);
@@ -839,7 +978,7 @@ taskMap.syncUserData = async (
         },
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("syncUserData task failed:", error);
 
     const panels = webviewPanelList.filter(
@@ -850,7 +989,7 @@ taskMap.syncUserData = async (
         cbid: message.cbid,
         data: {
           success: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         },
       });
     }
@@ -860,7 +999,7 @@ taskMap.syncUserData = async (
 // 同步规则到服务器任务处理器 - 简化为只返回成功状态
 taskMap.syncRulesToServer = async (
   context: vscode.ExtensionContext,
-  message: any
+  message: TaskMessage
 ) => {
   try {
     console.log("同步规则到服务器任务 - 由webview处理", message.data);
@@ -878,7 +1017,7 @@ taskMap.syncRulesToServer = async (
         },
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("syncRulesToServer task failed:", error);
 
     const panels = webviewPanelList.filter(
@@ -889,7 +1028,7 @@ taskMap.syncRulesToServer = async (
         cbid: message.cbid,
         data: {
           success: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         },
       });
     }
@@ -899,7 +1038,7 @@ taskMap.syncRulesToServer = async (
 // 同步 MCP 配置到服务器任务处理器 - 简化为只返回成功状态
 taskMap.syncMcpsToServer = async (
   context: vscode.ExtensionContext,
-  message: any
+  message: TaskMessage
 ) => {
   try {
     console.log("同步MCP配置到服务器任务 - 由webview处理", message.data);
@@ -917,7 +1056,7 @@ taskMap.syncMcpsToServer = async (
         },
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("syncMcpsToServer task failed:", error);
 
     const panels = webviewPanelList.filter(
@@ -928,7 +1067,7 @@ taskMap.syncMcpsToServer = async (
         cbid: message.cbid,
         data: {
           success: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         },
       });
     }
@@ -938,10 +1077,19 @@ taskMap.syncMcpsToServer = async (
 // 网络请求处理器 - 允许 webview 通过扩展进行网络请求
 taskMap.networkRequest = async (
   context: vscode.ExtensionContext,
-  message: any
+  message: TaskMessage
 ) => {
   try {
-    const { url, method = "GET", headers = {}, body } = message.data;
+    const requestData = message.data;
+    if (!requestData || typeof requestData !== "object") {
+      throw new Error("请求数据无效");
+    }
+
+    const { url, method = "GET", headers = {}, body } = requestData;
+    if (!url || typeof url !== "string") {
+      throw new Error("URL 参数无效");
+    }
+
     console.log(`网络请求: ${method} ${url}`);
 
     // 使用 Node.js 的 https/http 模块进行请求
@@ -960,11 +1108,20 @@ taskMap.networkRequest = async (
       method: method,
       headers: {
         "User-Agent": "DIFlow-VSCode-Extension/1.0.0",
-        ...headers,
+        ...(typeof headers === "object" && headers !== null ? headers : {}),
       },
     };
 
-    const result = await new Promise((resolve, reject) => {
+    interface NetworkResponse {
+      ok: boolean;
+      status: number;
+      statusText: string;
+      data: unknown;
+      text: string;
+      headers: Record<string, string>;
+    }
+
+    const result = await new Promise<NetworkResponse>((resolve, reject) => {
       const req = requestModule.request(requestOptions, (res: any) => {
         let data = "";
         res.on("data", (chunk: any) => {
@@ -972,7 +1129,7 @@ taskMap.networkRequest = async (
         });
         res.on("end", () => {
           try {
-            let parsedData;
+            let parsedData: unknown;
             try {
               parsedData = JSON.parse(data);
             } catch {
@@ -993,7 +1150,7 @@ taskMap.networkRequest = async (
         });
       });
 
-      req.on("error", (error: any) => {
+      req.on("error", (error: Error) => {
         reject(error);
       });
 
@@ -1007,7 +1164,7 @@ taskMap.networkRequest = async (
       req.end();
     });
 
-    console.log(`网络请求完成: ${method} ${url} - ${(result as any).status}`);
+    console.log(`网络请求完成: ${method} ${url} - ${result.status}`);
 
     // 发送结果回 webview
     const panels = webviewPanelList.filter(
@@ -1022,7 +1179,7 @@ taskMap.networkRequest = async (
         },
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("网络请求失败:", error);
 
     const panels = webviewPanelList.filter(
@@ -1033,7 +1190,7 @@ taskMap.networkRequest = async (
         cbid: message.cbid,
         data: {
           success: false,
-          error: error.message,
+          error: error instanceof Error ? error.message : String(error),
         },
       });
     }
@@ -1043,11 +1200,19 @@ taskMap.networkRequest = async (
 // 网络请求代理任务
 taskMap.proxyRequest = async (
   context: vscode.ExtensionContext,
-  message: any
+  message: TaskMessage
 ) => {
   try {
     console.log("代理网络请求:", message.data);
-    const { method, url, data, headers } = message.data;
+    const requestData = message.data;
+    if (!requestData || typeof requestData !== "object") {
+      throw new Error("请求数据无效");
+    }
+
+    const { method, url, data, headers } = requestData;
+    if (!method || !url) {
+      throw new Error("方法或URL参数缺失");
+    }
 
     // 使用 Node.js 的 https/http 模块发送请求
     const https = require("https");
@@ -1063,11 +1228,11 @@ taskMap.proxyRequest = async (
       hostname: parsedUrl.hostname,
       port: parsedUrl.port || (isHttps ? 443 : 80),
       path: parsedUrl.path,
-      method: method.toUpperCase(),
+      method: String(method).toUpperCase(),
       headers: {
         "Content-Type": "application/json",
         "User-Agent": "DIFlow-VSCode-Extension/1.0.0",
-        ...headers,
+        ...(headers || {}),
       },
       // 忽略 SSL 证书验证（仅用于开发）
       rejectUnauthorized: false,
@@ -1075,8 +1240,17 @@ taskMap.proxyRequest = async (
 
     console.log("代理请求选项:", options);
 
+    interface ProxyResponse {
+      success: boolean;
+      status?: number;
+      data?: unknown;
+      headers?: Record<string, string>;
+      message?: string;
+      error?: Error;
+    }
+
     // 发送请求
-    const result = await new Promise((resolve, reject) => {
+    const result = await new Promise<ProxyResponse>((resolve, reject) => {
       const req = requestLib.request(options, (res: any) => {
         let responseData = "";
 
@@ -1106,7 +1280,7 @@ taskMap.proxyRequest = async (
         });
       });
 
-      req.on("error", (error: any) => {
+      req.on("error", (error: Error) => {
         console.error("代理请求错误:", error);
         reject({
           success: false,
@@ -1127,7 +1301,8 @@ taskMap.proxyRequest = async (
       // 发送请求体数据
       if (
         data &&
-        (method.toUpperCase() === "POST" || method.toUpperCase() === "PUT")
+        (String(method).toUpperCase() === "POST" ||
+          String(method).toUpperCase() === "PUT")
       ) {
         const jsonData = JSON.stringify(data);
         console.log("发送请求体数据:", jsonData);
@@ -1149,7 +1324,7 @@ taskMap.proxyRequest = async (
         data: result,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("proxyRequest task failed:", error);
     // 发送错误回 webview
     const panels = webviewPanelList.filter(
@@ -1160,7 +1335,7 @@ taskMap.proxyRequest = async (
         cbid: message.cbid,
         data: {
           success: false,
-          message: error.message || "网络请求失败",
+          message: error instanceof Error ? error.message : "网络请求失败",
           error: error,
         },
       });

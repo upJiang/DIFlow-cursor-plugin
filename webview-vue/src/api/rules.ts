@@ -4,9 +4,12 @@ import { httpRequest } from "../utils/httpUtils";
  * 规则数据类型定义
  */
 export interface RuleItem {
-  ruleName: string;
-  ruleContent: string;
-  sortOrder?: number;
+  name: string;
+  content: string;
+  description?: string;
+  type?: string;
+  order?: number;
+  enabled?: boolean;
 }
 
 export interface RuleResponse {
@@ -35,6 +38,24 @@ export const rulesApi = {
     rules: RuleItem[],
   ): Promise<{ success: boolean; message: string }> => {
     const response = await httpRequest("POST", "/cursor/sync/rules", { rules });
+
+    // 处理嵌套的响应数据结构
+    if (
+      response.data &&
+      typeof response.data === "object" &&
+      "data" in response.data
+    ) {
+      const innerData = response.data.data as {
+        success: boolean;
+        message: string;
+      };
+      return {
+        success: innerData.success || false,
+        message: innerData.message || "同步失败",
+      };
+    }
+
+    // 兼容直接返回的格式
     return response.data as { success: boolean; message: string };
   },
 

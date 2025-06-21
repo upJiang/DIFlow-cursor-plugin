@@ -1,2 +1,5260 @@
-(()=>{var e={3873:(e,t,s)=>{"use strict";const r=s(77),o=s(1017),n=s(1381).mkdirsSync,i=s(318).utimesMillisSync,c=s(2733);function a(e,t,s,n){const i=(n.dereference?r.statSync:r.lstatSync)(t);if(i.isDirectory())return function(e,t,s,o,n){return t?f(s,o,n):function(e,t,s,o){return r.mkdirSync(s),f(t,s,o),u(s,e)}(e.mode,s,o,n)}(i,e,t,s,n);if(i.isFile()||i.isCharacterDevice()||i.isBlockDevice())return function(e,t,s,o,n){return t?function(e,t,s,o){if(o.overwrite)return r.unlinkSync(s),l(e,t,s,o);if(o.errorOnExist)throw new Error(`'${s}' already exists`)}(e,s,o,n):l(e,s,o,n)}(i,e,t,s,n);if(i.isSymbolicLink())return function(e,t,s,n){let i=r.readlinkSync(t);if(n.dereference&&(i=o.resolve(process.cwd(),i)),e){let e;try{e=r.readlinkSync(s)}catch(e){if("EINVAL"===e.code||"UNKNOWN"===e.code)return r.symlinkSync(i,s);throw e}if(n.dereference&&(e=o.resolve(process.cwd(),e)),c.isSrcSubdir(i,e))throw new Error(`Cannot copy '${i}' to a subdirectory of itself, '${e}'.`);if(c.isSrcSubdir(e,i))throw new Error(`Cannot overwrite '${e}' with '${i}'.`);return function(e,t){return r.unlinkSync(t),r.symlinkSync(e,t)}(i,s)}return r.symlinkSync(i,s)}(e,t,s,n);if(i.isSocket())throw new Error(`Cannot copy a socket file: ${t}`);if(i.isFIFO())throw new Error(`Cannot copy a FIFO pipe: ${t}`);throw new Error(`Unknown file: ${t}`)}function l(e,t,s,o){return r.copyFileSync(t,s),o.preserveTimestamps&&function(e,t,s){(function(e){return 0==(128&e)})(e)&&function(e,t){u(e,128|t)}(s,e),function(e,t){const s=r.statSync(e);i(t,s.atime,s.mtime)}(t,s)}(e.mode,t,s),u(s,e.mode)}function u(e,t){return r.chmodSync(e,t)}function f(e,t,s){r.readdirSync(e).forEach((r=>function(e,t,s,r){const n=o.join(t,e),i=o.join(s,e);if(r.filter&&!r.filter(n,i))return;const{destStat:l}=c.checkPathsSync(n,i,"copy",r);return a(l,n,i,r)}(r,e,t,s)))}e.exports=function(e,t,s){"function"==typeof s&&(s={filter:s}),(s=s||{}).clobber=!("clobber"in s)||!!s.clobber,s.overwrite="overwrite"in s?!!s.overwrite:s.clobber,s.preserveTimestamps&&"ia32"===process.arch&&process.emitWarning("Using the preserveTimestamps option in 32-bit node is not recommended;\n\n\tsee https://github.com/jprichardson/node-fs-extra/issues/269","Warning","fs-extra-WARN0002");const{srcStat:i,destStat:l}=c.checkPathsSync(e,t,"copy",s);if(c.checkParentPathsSync(e,i,t,"copy"),s.filter&&!s.filter(e,t))return;const u=o.dirname(t);return r.existsSync(u)||n(u),a(l,e,t,s)}},7189:(e,t,s)=>{"use strict";const r=s(7749),o=s(1017),{mkdirs:n}=s(1381),{pathExists:i}=s(9257),{utimesMillis:c}=s(318),a=s(2733);async function l(e,t,s){return!s.filter||s.filter(e,t)}async function u(e,t,s,n){const i=n.dereference?r.stat:r.lstat,c=await i(t);if(c.isDirectory())return async function(e,t,s,n,i){t||await r.mkdir(n);const c=await r.readdir(s);await Promise.all(c.map((async e=>{const t=o.join(s,e),r=o.join(n,e);if(!await l(t,r,i))return;const{destStat:c}=await a.checkPaths(t,r,"copy",i);return u(c,t,r,i)}))),t||await r.chmod(n,e.mode)}(c,e,t,s,n);if(c.isFile()||c.isCharacterDevice()||c.isBlockDevice())return async function(e,t,s,o,n){if(!t)return f(e,s,o,n);if(n.overwrite)return await r.unlink(o),f(e,s,o,n);if(n.errorOnExist)throw new Error(`'${o}' already exists`)}(c,e,t,s,n);if(c.isSymbolicLink())return async function(e,t,s,n){let i=await r.readlink(t);if(n.dereference&&(i=o.resolve(process.cwd(),i)),!e)return r.symlink(i,s);let c=null;try{c=await r.readlink(s)}catch(e){if("EINVAL"===e.code||"UNKNOWN"===e.code)return r.symlink(i,s);throw e}if(n.dereference&&(c=o.resolve(process.cwd(),c)),a.isSrcSubdir(i,c))throw new Error(`Cannot copy '${i}' to a subdirectory of itself, '${c}'.`);if(a.isSrcSubdir(c,i))throw new Error(`Cannot overwrite '${c}' with '${i}'.`);return await r.unlink(s),r.symlink(i,s)}(e,t,s,n);if(c.isSocket())throw new Error(`Cannot copy a socket file: ${t}`);if(c.isFIFO())throw new Error(`Cannot copy a FIFO pipe: ${t}`);throw new Error(`Unknown file: ${t}`)}async function f(e,t,s,o){if(await r.copyFile(t,s),o.preserveTimestamps){0==(128&e.mode)&&await function(e,t){return r.chmod(e,128|t)}(s,e.mode);const o=await r.stat(t);await c(s,o.atime,o.mtime)}return r.chmod(s,e.mode)}e.exports=async function(e,t,s={}){"function"==typeof s&&(s={filter:s}),s.clobber=!("clobber"in s)||!!s.clobber,s.overwrite="overwrite"in s?!!s.overwrite:s.clobber,s.preserveTimestamps&&"ia32"===process.arch&&process.emitWarning("Using the preserveTimestamps option in 32-bit node is not recommended;\n\n\tsee https://github.com/jprichardson/node-fs-extra/issues/269","Warning","fs-extra-WARN0001");const{srcStat:r,destStat:c}=await a.checkPaths(e,t,"copy",s);if(await a.checkParentPaths(e,r,t,"copy"),!await l(e,t,s))return;const f=o.dirname(t);await i(f)||await n(f),await u(c,e,t,s)}},6464:(e,t,s)=>{"use strict";const r=s(8981).fromPromise;e.exports={copy:r(s(7189)),copySync:s(3873)}},5590:(e,t,s)=>{"use strict";const r=s(8981).fromPromise,o=s(7749),n=s(1017),i=s(1381),c=s(4542),a=r((async function(e){let t;try{t=await o.readdir(e)}catch{return i.mkdirs(e)}return Promise.all(t.map((t=>c.remove(n.join(e,t)))))}));function l(e){let t;try{t=o.readdirSync(e)}catch{return i.mkdirsSync(e)}t.forEach((t=>{t=n.join(e,t),c.removeSync(t)}))}e.exports={emptyDirSync:l,emptydirSync:l,emptyDir:a,emptydir:a}},6530:(e,t,s)=>{"use strict";const r=s(8981).fromPromise,o=s(1017),n=s(7749),i=s(1381);e.exports={createFile:r((async function(e){let t;try{t=await n.stat(e)}catch{}if(t&&t.isFile())return;const s=o.dirname(e);let r=null;try{r=await n.stat(s)}catch(t){if("ENOENT"===t.code)return await i.mkdirs(s),void await n.writeFile(e,"");throw t}r.isDirectory()?await n.writeFile(e,""):await n.readdir(s)})),createFileSync:function(e){let t;try{t=n.statSync(e)}catch{}if(t&&t.isFile())return;const s=o.dirname(e);try{n.statSync(s).isDirectory()||n.readdirSync(s)}catch(e){if(!e||"ENOENT"!==e.code)throw e;i.mkdirsSync(s)}n.writeFileSync(e,"")}}},1720:(e,t,s)=>{"use strict";const{createFile:r,createFileSync:o}=s(6530),{createLink:n,createLinkSync:i}=s(4147),{createSymlink:c,createSymlinkSync:a}=s(3635);e.exports={createFile:r,createFileSync:o,ensureFile:r,ensureFileSync:o,createLink:n,createLinkSync:i,ensureLink:n,ensureLinkSync:i,createSymlink:c,createSymlinkSync:a,ensureSymlink:c,ensureSymlinkSync:a}},4147:(e,t,s)=>{"use strict";const r=s(8981).fromPromise,o=s(1017),n=s(7749),i=s(1381),{pathExists:c}=s(9257),{areIdentical:a}=s(2733);e.exports={createLink:r((async function(e,t){let s,r;try{s=await n.lstat(t)}catch{}try{r=await n.lstat(e)}catch(e){throw e.message=e.message.replace("lstat","ensureLink"),e}if(s&&a(r,s))return;const l=o.dirname(t);await c(l)||await i.mkdirs(l),await n.link(e,t)})),createLinkSync:function(e,t){let s;try{s=n.lstatSync(t)}catch{}try{const t=n.lstatSync(e);if(s&&a(t,s))return}catch(e){throw e.message=e.message.replace("lstat","ensureLink"),e}const r=o.dirname(t);return n.existsSync(r)||i.mkdirsSync(r),n.linkSync(e,t)}}},6072:(e,t,s)=>{"use strict";const r=s(1017),o=s(7749),{pathExists:n}=s(9257),i=s(8981).fromPromise;e.exports={symlinkPaths:i((async function(e,t){if(r.isAbsolute(e)){try{await o.lstat(e)}catch(e){throw e.message=e.message.replace("lstat","ensureSymlink"),e}return{toCwd:e,toDst:e}}const s=r.dirname(t),i=r.join(s,e);if(await n(i))return{toCwd:i,toDst:e};try{await o.lstat(e)}catch(e){throw e.message=e.message.replace("lstat","ensureSymlink"),e}return{toCwd:e,toDst:r.relative(s,e)}})),symlinkPathsSync:function(e,t){if(r.isAbsolute(e)){if(!o.existsSync(e))throw new Error("absolute srcpath does not exist");return{toCwd:e,toDst:e}}const s=r.dirname(t),n=r.join(s,e);if(o.existsSync(n))return{toCwd:n,toDst:e};if(!o.existsSync(e))throw new Error("relative srcpath does not exist");return{toCwd:e,toDst:r.relative(s,e)}}}},9259:(e,t,s)=>{"use strict";const r=s(7749),o=s(8981).fromPromise;e.exports={symlinkType:o((async function(e,t){if(t)return t;let s;try{s=await r.lstat(e)}catch{return"file"}return s&&s.isDirectory()?"dir":"file"})),symlinkTypeSync:function(e,t){if(t)return t;let s;try{s=r.lstatSync(e)}catch{return"file"}return s&&s.isDirectory()?"dir":"file"}}},3635:(e,t,s)=>{"use strict";const r=s(8981).fromPromise,o=s(1017),n=s(7749),{mkdirs:i,mkdirsSync:c}=s(1381),{symlinkPaths:a,symlinkPathsSync:l}=s(6072),{symlinkType:u,symlinkTypeSync:f}=s(9259),{pathExists:d}=s(9257),{areIdentical:h}=s(2733);e.exports={createSymlink:r((async function(e,t,s){let r;try{r=await n.lstat(t)}catch{}if(r&&r.isSymbolicLink()){const[s,r]=await Promise.all([n.stat(e),n.stat(t)]);if(h(s,r))return}const c=await a(e,t);e=c.toDst;const l=await u(c.toCwd,s),f=o.dirname(t);return await d(f)||await i(f),n.symlink(e,t,l)})),createSymlinkSync:function(e,t,s){let r;try{r=n.lstatSync(t)}catch{}if(r&&r.isSymbolicLink()){const s=n.statSync(e),r=n.statSync(t);if(h(s,r))return}const i=l(e,t);e=i.toDst,s=f(i.toCwd,s);const a=o.dirname(t);return n.existsSync(a)||c(a),n.symlinkSync(e,t,s)}}},7749:(e,t,s)=>{"use strict";const r=s(8981).fromCallback,o=s(77),n=["access","appendFile","chmod","chown","close","copyFile","fchmod","fchown","fdatasync","fstat","fsync","ftruncate","futimes","lchmod","lchown","link","lstat","mkdir","mkdtemp","open","opendir","readdir","readFile","readlink","realpath","rename","rm","rmdir","stat","symlink","truncate","unlink","utimes","writeFile"].filter((e=>"function"==typeof o[e]));Object.assign(t,o),n.forEach((e=>{t[e]=r(o[e])})),t.exists=function(e,t){return"function"==typeof t?o.exists(e,t):new Promise((t=>o.exists(e,t)))},t.read=function(e,t,s,r,n,i){return"function"==typeof i?o.read(e,t,s,r,n,i):new Promise(((i,c)=>{o.read(e,t,s,r,n,((e,t,s)=>{if(e)return c(e);i({bytesRead:t,buffer:s})}))}))},t.write=function(e,t,...s){return"function"==typeof s[s.length-1]?o.write(e,t,...s):new Promise(((r,n)=>{o.write(e,t,...s,((e,t,s)=>{if(e)return n(e);r({bytesWritten:t,buffer:s})}))}))},t.readv=function(e,t,...s){return"function"==typeof s[s.length-1]?o.readv(e,t,...s):new Promise(((r,n)=>{o.readv(e,t,...s,((e,t,s)=>{if(e)return n(e);r({bytesRead:t,buffers:s})}))}))},t.writev=function(e,t,...s){return"function"==typeof s[s.length-1]?o.writev(e,t,...s):new Promise(((r,n)=>{o.writev(e,t,...s,((e,t,s)=>{if(e)return n(e);r({bytesWritten:t,buffers:s})}))}))},"function"==typeof o.realpath.native?t.realpath.native=r(o.realpath.native):process.emitWarning("fs.realpath.native is not a function. Is fs being monkey-patched?","Warning","fs-extra-WARN0003")},5674:(e,t,s)=>{"use strict";e.exports={...s(7749),...s(6464),...s(5590),...s(1720),...s(6573),...s(1381),...s(530),...s(4670),...s(9257),...s(4542)}},6573:(e,t,s)=>{"use strict";const r=s(8981).fromPromise,o=s(7183);o.outputJson=r(s(3508)),o.outputJsonSync=s(9578),o.outputJSON=o.outputJson,o.outputJSONSync=o.outputJsonSync,o.writeJSON=o.writeJson,o.writeJSONSync=o.writeJsonSync,o.readJSON=o.readJson,o.readJSONSync=o.readJsonSync,e.exports=o},7183:(e,t,s)=>{"use strict";const r=s(6813);e.exports={readJson:r.readFile,readJsonSync:r.readFileSync,writeJson:r.writeFile,writeJsonSync:r.writeFileSync}},9578:(e,t,s)=>{"use strict";const{stringify:r}=s(6780),{outputFileSync:o}=s(4670);e.exports=function(e,t,s){const n=r(t,s);o(e,n,s)}},3508:(e,t,s)=>{"use strict";const{stringify:r}=s(6780),{outputFile:o}=s(4670);e.exports=async function(e,t,s={}){const n=r(t,s);await o(e,n,s)}},1381:(e,t,s)=>{"use strict";const r=s(8981).fromPromise,{makeDir:o,makeDirSync:n}=s(8233),i=r(o);e.exports={mkdirs:i,mkdirsSync:n,mkdirp:i,mkdirpSync:n,ensureDir:i,ensureDirSync:n}},8233:(e,t,s)=>{"use strict";const r=s(7749),{checkPath:o}=s(3468),n=e=>"number"==typeof e?e:{mode:511,...e}.mode;e.exports.makeDir=async(e,t)=>(o(e),r.mkdir(e,{mode:n(t),recursive:!0})),e.exports.makeDirSync=(e,t)=>(o(e),r.mkdirSync(e,{mode:n(t),recursive:!0}))},3468:(e,t,s)=>{"use strict";const r=s(1017);e.exports.checkPath=function(e){if("win32"===process.platform&&/[<>:"|?*]/.test(e.replace(r.parse(e).root,""))){const t=new Error(`Path contains invalid characters: ${e}`);throw t.code="EINVAL",t}}},530:(e,t,s)=>{"use strict";const r=s(8981).fromPromise;e.exports={move:r(s(436)),moveSync:s(3736)}},3736:(e,t,s)=>{"use strict";const r=s(77),o=s(1017),n=s(6464).copySync,i=s(4542).removeSync,c=s(1381).mkdirpSync,a=s(2733);function l(e,t,s){try{r.renameSync(e,t)}catch(r){if("EXDEV"!==r.code)throw r;return function(e,t,s){return n(e,t,{overwrite:s,errorOnExist:!0,preserveTimestamps:!0}),i(e)}(e,t,s)}}e.exports=function(e,t,s){const n=(s=s||{}).overwrite||s.clobber||!1,{srcStat:u,isChangingCase:f=!1}=a.checkPathsSync(e,t,"move",s);return a.checkParentPathsSync(e,u,t,"move"),function(e){const t=o.dirname(e);return o.parse(t).root===t}(t)||c(o.dirname(t)),function(e,t,s,o){if(o)return l(e,t,s);if(s)return i(t),l(e,t,s);if(r.existsSync(t))throw new Error("dest already exists.");return l(e,t,s)}(e,t,n,f)}},436:(e,t,s)=>{"use strict";const r=s(7749),o=s(1017),{copy:n}=s(6464),{remove:i}=s(4542),{mkdirp:c}=s(1381),{pathExists:a}=s(9257),l=s(2733);e.exports=async function(e,t,s={}){const u=s.overwrite||s.clobber||!1,{srcStat:f,isChangingCase:d=!1}=await l.checkPaths(e,t,"move",s);await l.checkParentPaths(e,f,t,"move");const h=o.dirname(t);return o.parse(h).root!==h&&await c(h),async function(e,t,s,o){if(!o)if(s)await i(t);else if(await a(t))throw new Error("dest already exists.");try{await r.rename(e,t)}catch(r){if("EXDEV"!==r.code)throw r;await async function(e,t,s){const r={overwrite:s,errorOnExist:!0,preserveTimestamps:!0};return await n(e,t,r),i(e)}(e,t,s)}}(e,t,u,d)}},4670:(e,t,s)=>{"use strict";const r=s(8981).fromPromise,o=s(7749),n=s(1017),i=s(1381),c=s(9257).pathExists;e.exports={outputFile:r((async function(e,t,s="utf-8"){const r=n.dirname(e);return await c(r)||await i.mkdirs(r),o.writeFile(e,t,s)})),outputFileSync:function(e,...t){const s=n.dirname(e);o.existsSync(s)||i.mkdirsSync(s),o.writeFileSync(e,...t)}}},9257:(e,t,s)=>{"use strict";const r=s(8981).fromPromise,o=s(7749);e.exports={pathExists:r((function(e){return o.access(e).then((()=>!0)).catch((()=>!1))})),pathExistsSync:o.existsSync}},4542:(e,t,s)=>{"use strict";const r=s(77),o=s(8981).fromCallback;e.exports={remove:o((function(e,t){r.rm(e,{recursive:!0,force:!0},t)})),removeSync:function(e){r.rmSync(e,{recursive:!0,force:!0})}}},2733:(e,t,s)=>{"use strict";const r=s(7749),o=s(1017),n=s(8981).fromPromise;function i(e,t){return t.ino&&t.dev&&t.ino===e.ino&&t.dev===e.dev}function c(e,t){const s=o.resolve(e).split(o.sep).filter((e=>e)),r=o.resolve(t).split(o.sep).filter((e=>e));return s.every(((e,t)=>r[t]===e))}function a(e,t,s){return`Cannot ${s} '${e}' to a subdirectory of itself, '${t}'.`}e.exports={checkPaths:n((async function(e,t,s,n){const{srcStat:l,destStat:u}=await function(e,t,s){const o=s.dereference?e=>r.stat(e,{bigint:!0}):e=>r.lstat(e,{bigint:!0});return Promise.all([o(e),o(t).catch((e=>{if("ENOENT"===e.code)return null;throw e}))]).then((([e,t])=>({srcStat:e,destStat:t})))}(e,t,n);if(u){if(i(l,u)){const r=o.basename(e),n=o.basename(t);if("move"===s&&r!==n&&r.toLowerCase()===n.toLowerCase())return{srcStat:l,destStat:u,isChangingCase:!0};throw new Error("Source and destination must not be the same.")}if(l.isDirectory()&&!u.isDirectory())throw new Error(`Cannot overwrite non-directory '${t}' with directory '${e}'.`);if(!l.isDirectory()&&u.isDirectory())throw new Error(`Cannot overwrite directory '${t}' with non-directory '${e}'.`)}if(l.isDirectory()&&c(e,t))throw new Error(a(e,t,s));return{srcStat:l,destStat:u}})),checkPathsSync:function(e,t,s,n){const{srcStat:l,destStat:u}=function(e,t,s){let o;const n=s.dereference?e=>r.statSync(e,{bigint:!0}):e=>r.lstatSync(e,{bigint:!0}),i=n(e);try{o=n(t)}catch(e){if("ENOENT"===e.code)return{srcStat:i,destStat:null};throw e}return{srcStat:i,destStat:o}}(e,t,n);if(u){if(i(l,u)){const r=o.basename(e),n=o.basename(t);if("move"===s&&r!==n&&r.toLowerCase()===n.toLowerCase())return{srcStat:l,destStat:u,isChangingCase:!0};throw new Error("Source and destination must not be the same.")}if(l.isDirectory()&&!u.isDirectory())throw new Error(`Cannot overwrite non-directory '${t}' with directory '${e}'.`);if(!l.isDirectory()&&u.isDirectory())throw new Error(`Cannot overwrite directory '${t}' with non-directory '${e}'.`)}if(l.isDirectory()&&c(e,t))throw new Error(a(e,t,s));return{srcStat:l,destStat:u}},checkParentPaths:n((async function e(t,s,n,c){const l=o.resolve(o.dirname(t)),u=o.resolve(o.dirname(n));if(u===l||u===o.parse(u).root)return;let f;try{f=await r.stat(u,{bigint:!0})}catch(e){if("ENOENT"===e.code)return;throw e}if(i(s,f))throw new Error(a(t,n,c));return e(t,s,u,c)})),checkParentPathsSync:function e(t,s,n,c){const l=o.resolve(o.dirname(t)),u=o.resolve(o.dirname(n));if(u===l||u===o.parse(u).root)return;let f;try{f=r.statSync(u,{bigint:!0})}catch(e){if("ENOENT"===e.code)return;throw e}if(i(s,f))throw new Error(a(t,n,c));return e(t,s,u,c)},isSrcSubdir:c,areIdentical:i}},318:(e,t,s)=>{"use strict";const r=s(7749),o=s(8981).fromPromise;e.exports={utimesMillis:o((async function(e,t,s){const o=await r.open(e,"r+");let n=null;try{await r.futimes(o,t,s)}finally{try{await r.close(o)}catch(e){n=e}}if(n)throw n})),utimesMillisSync:function(e,t,s){const o=r.openSync(e,"r+");return r.futimesSync(o,t,s),r.closeSync(o)}}},6458:e=>{"use strict";e.exports=function(e){if(null===e||"object"!=typeof e)return e;if(e instanceof Object)var s={__proto__:t(e)};else s=Object.create(null);return Object.getOwnPropertyNames(e).forEach((function(t){Object.defineProperty(s,t,Object.getOwnPropertyDescriptor(e,t))})),s};var t=Object.getPrototypeOf||function(e){return e.__proto__}},77:(e,t,s)=>{var r,o,n=s(7147),i=s(2161),c=s(8520),a=s(6458),l=s(3837);function u(e,t){Object.defineProperty(e,r,{get:function(){return t}})}"function"==typeof Symbol&&"function"==typeof Symbol.for?(r=Symbol.for("graceful-fs.queue"),o=Symbol.for("graceful-fs.previous")):(r="___graceful-fs.queue",o="___graceful-fs.previous");var f,d=function(){};if(l.debuglog?d=l.debuglog("gfs4"):/\bgfs4\b/i.test(process.env.NODE_DEBUG||"")&&(d=function(){var e=l.format.apply(l,arguments);e="GFS4: "+e.split(/\n/).join("\nGFS4: "),console.error(e)}),!n[r]){var h=global[r]||[];u(n,h),n.close=function(e){function t(t,s){return e.call(n,t,(function(e){e||y(),"function"==typeof s&&s.apply(this,arguments)}))}return Object.defineProperty(t,o,{value:e}),t}(n.close),n.closeSync=function(e){function t(t){e.apply(n,arguments),y()}return Object.defineProperty(t,o,{value:e}),t}(n.closeSync),/\bgfs4\b/i.test(process.env.NODE_DEBUG||"")&&process.on("exit",(function(){d(n[r]),s(9491).equal(n[r].length,0)}))}function p(e){i(e),e.gracefulify=p,e.createReadStream=function(t,s){return new e.ReadStream(t,s)},e.createWriteStream=function(t,s){return new e.WriteStream(t,s)};var t=e.readFile;e.readFile=function(e,s,r){return"function"==typeof s&&(r=s,s=null),function e(s,r,o,n){return t(s,r,(function(t){!t||"EMFILE"!==t.code&&"ENFILE"!==t.code?"function"==typeof o&&o.apply(this,arguments):m([e,[s,r,o],t,n||Date.now(),Date.now()])}))}(e,s,r)};var s=e.writeFile;e.writeFile=function(e,t,r,o){return"function"==typeof r&&(o=r,r=null),function e(t,r,o,n,i){return s(t,r,o,(function(s){!s||"EMFILE"!==s.code&&"ENFILE"!==s.code?"function"==typeof n&&n.apply(this,arguments):m([e,[t,r,o,n],s,i||Date.now(),Date.now()])}))}(e,t,r,o)};var r=e.appendFile;r&&(e.appendFile=function(e,t,s,o){return"function"==typeof s&&(o=s,s=null),function e(t,s,o,n,i){return r(t,s,o,(function(r){!r||"EMFILE"!==r.code&&"ENFILE"!==r.code?"function"==typeof n&&n.apply(this,arguments):m([e,[t,s,o,n],r,i||Date.now(),Date.now()])}))}(e,t,s,o)});var o=e.copyFile;o&&(e.copyFile=function(e,t,s,r){return"function"==typeof s&&(r=s,s=0),function e(t,s,r,n,i){return o(t,s,r,(function(o){!o||"EMFILE"!==o.code&&"ENFILE"!==o.code?"function"==typeof n&&n.apply(this,arguments):m([e,[t,s,r,n],o,i||Date.now(),Date.now()])}))}(e,t,s,r)});var n=e.readdir;e.readdir=function(e,t,s){"function"==typeof t&&(s=t,t=null);var r=a.test(process.version)?function(e,t,s,r){return n(e,o(e,t,s,r))}:function(e,t,s,r){return n(e,t,o(e,t,s,r))};return r(e,t,s);function o(e,t,s,o){return function(n,i){!n||"EMFILE"!==n.code&&"ENFILE"!==n.code?(i&&i.sort&&i.sort(),"function"==typeof s&&s.call(this,n,i)):m([r,[e,t,s],n,o||Date.now(),Date.now()])}}};var a=/^v[0-5]\./;if("v0.8"===process.version.substr(0,4)){var l=c(e);y=l.ReadStream,g=l.WriteStream}var u=e.ReadStream;u&&(y.prototype=Object.create(u.prototype),y.prototype.open=function(){var e=this;S(e.path,e.flags,e.mode,(function(t,s){t?(e.autoClose&&e.destroy(),e.emit("error",t)):(e.fd=s,e.emit("open",s),e.read())}))});var f=e.WriteStream;f&&(g.prototype=Object.create(f.prototype),g.prototype.open=function(){var e=this;S(e.path,e.flags,e.mode,(function(t,s){t?(e.destroy(),e.emit("error",t)):(e.fd=s,e.emit("open",s))}))}),Object.defineProperty(e,"ReadStream",{get:function(){return y},set:function(e){y=e},enumerable:!0,configurable:!0}),Object.defineProperty(e,"WriteStream",{get:function(){return g},set:function(e){g=e},enumerable:!0,configurable:!0});var d=y;Object.defineProperty(e,"FileReadStream",{get:function(){return d},set:function(e){d=e},enumerable:!0,configurable:!0});var h=g;function y(e,t){return this instanceof y?(u.apply(this,arguments),this):y.apply(Object.create(y.prototype),arguments)}function g(e,t){return this instanceof g?(f.apply(this,arguments),this):g.apply(Object.create(g.prototype),arguments)}Object.defineProperty(e,"FileWriteStream",{get:function(){return h},set:function(e){h=e},enumerable:!0,configurable:!0});var w=e.open;function S(e,t,s,r){return"function"==typeof s&&(r=s,s=null),function e(t,s,r,o,n){return w(t,s,r,(function(i,c){!i||"EMFILE"!==i.code&&"ENFILE"!==i.code?"function"==typeof o&&o.apply(this,arguments):m([e,[t,s,r,o],i,n||Date.now(),Date.now()])}))}(e,t,s,r)}return e.open=S,e}function m(e){d("ENQUEUE",e[0].name,e[1]),n[r].push(e),g()}function y(){for(var e=Date.now(),t=0;t<n[r].length;++t)n[r][t].length>2&&(n[r][t][3]=e,n[r][t][4]=e);g()}function g(){if(clearTimeout(f),f=void 0,0!==n[r].length){var e=n[r].shift(),t=e[0],s=e[1],o=e[2],i=e[3],c=e[4];if(void 0===i)d("RETRY",t.name,s),t.apply(null,s);else if(Date.now()-i>=6e4){d("TIMEOUT",t.name,s);var a=s.pop();"function"==typeof a&&a.call(null,o)}else{var l=Date.now()-c,u=Math.max(c-i,1);l>=Math.min(1.2*u,100)?(d("RETRY",t.name,s),t.apply(null,s.concat([i]))):n[r].push(e)}void 0===f&&(f=setTimeout(g,0))}}global[r]||u(global,n[r]),e.exports=p(a(n)),process.env.TEST_GRACEFUL_FS_GLOBAL_PATCH&&!n.__patched&&(e.exports=p(n),n.__patched=!0)},8520:(e,t,s)=>{var r=s(2781).Stream;e.exports=function(e){return{ReadStream:function t(s,o){if(!(this instanceof t))return new t(s,o);r.call(this);var n=this;this.path=s,this.fd=null,this.readable=!0,this.paused=!1,this.flags="r",this.mode=438,this.bufferSize=65536,o=o||{};for(var i=Object.keys(o),c=0,a=i.length;c<a;c++){var l=i[c];this[l]=o[l]}if(this.encoding&&this.setEncoding(this.encoding),void 0!==this.start){if("number"!=typeof this.start)throw TypeError("start must be a Number");if(void 0===this.end)this.end=1/0;else if("number"!=typeof this.end)throw TypeError("end must be a Number");if(this.start>this.end)throw new Error("start must be <= end");this.pos=this.start}null===this.fd?e.open(this.path,this.flags,this.mode,(function(e,t){if(e)return n.emit("error",e),void(n.readable=!1);n.fd=t,n.emit("open",t),n._read()})):process.nextTick((function(){n._read()}))},WriteStream:function t(s,o){if(!(this instanceof t))return new t(s,o);r.call(this),this.path=s,this.fd=null,this.writable=!0,this.flags="w",this.encoding="binary",this.mode=438,this.bytesWritten=0,o=o||{};for(var n=Object.keys(o),i=0,c=n.length;i<c;i++){var a=n[i];this[a]=o[a]}if(void 0!==this.start){if("number"!=typeof this.start)throw TypeError("start must be a Number");if(this.start<0)throw new Error("start must be >= zero");this.pos=this.start}this.busy=!1,this._queue=[],null===this.fd&&(this._open=e.open,this._queue.push([this._open,this.path,this.flags,this.mode,void 0]),this.flush())}}}},2161:(e,t,s)=>{var r=s(2057),o=process.cwd,n=null,i=process.env.GRACEFUL_FS_PLATFORM||process.platform;process.cwd=function(){return n||(n=o.call(process)),n};try{process.cwd()}catch(e){}if("function"==typeof process.chdir){var c=process.chdir;process.chdir=function(e){n=null,c.call(process,e)},Object.setPrototypeOf&&Object.setPrototypeOf(process.chdir,c)}e.exports=function(e){function t(t){return t?function(s,r,o){return t.call(e,s,r,(function(e){l(e)&&(e=null),o&&o.apply(this,arguments)}))}:t}function s(t){return t?function(s,r){try{return t.call(e,s,r)}catch(e){if(!l(e))throw e}}:t}function o(t){return t?function(s,r,o,n){return t.call(e,s,r,o,(function(e){l(e)&&(e=null),n&&n.apply(this,arguments)}))}:t}function n(t){return t?function(s,r,o){try{return t.call(e,s,r,o)}catch(e){if(!l(e))throw e}}:t}function c(t){return t?function(s,r,o){function n(e,t){t&&(t.uid<0&&(t.uid+=4294967296),t.gid<0&&(t.gid+=4294967296)),o&&o.apply(this,arguments)}return"function"==typeof r&&(o=r,r=null),r?t.call(e,s,r,n):t.call(e,s,n)}:t}function a(t){return t?function(s,r){var o=r?t.call(e,s,r):t.call(e,s);return o&&(o.uid<0&&(o.uid+=4294967296),o.gid<0&&(o.gid+=4294967296)),o}:t}function l(e){return!e||"ENOSYS"===e.code||!(process.getuid&&0===process.getuid()||"EINVAL"!==e.code&&"EPERM"!==e.code)}var u;r.hasOwnProperty("O_SYMLINK")&&process.version.match(/^v0\.6\.[0-2]|^v0\.5\./)&&function(e){e.lchmod=function(t,s,o){e.open(t,r.O_WRONLY|r.O_SYMLINK,s,(function(t,r){t?o&&o(t):e.fchmod(r,s,(function(t){e.close(r,(function(e){o&&o(t||e)}))}))}))},e.lchmodSync=function(t,s){var o,n=e.openSync(t,r.O_WRONLY|r.O_SYMLINK,s),i=!0;try{o=e.fchmodSync(n,s),i=!1}finally{if(i)try{e.closeSync(n)}catch(e){}else e.closeSync(n)}return o}}(e),e.lutimes||function(e){r.hasOwnProperty("O_SYMLINK")&&e.futimes?(e.lutimes=function(t,s,o,n){e.open(t,r.O_SYMLINK,(function(t,r){t?n&&n(t):e.futimes(r,s,o,(function(t){e.close(r,(function(e){n&&n(t||e)}))}))}))},e.lutimesSync=function(t,s,o){var n,i=e.openSync(t,r.O_SYMLINK),c=!0;try{n=e.futimesSync(i,s,o),c=!1}finally{if(c)try{e.closeSync(i)}catch(e){}else e.closeSync(i)}return n}):e.futimes&&(e.lutimes=function(e,t,s,r){r&&process.nextTick(r)},e.lutimesSync=function(){})}(e),e.chown=o(e.chown),e.fchown=o(e.fchown),e.lchown=o(e.lchown),e.chmod=t(e.chmod),e.fchmod=t(e.fchmod),e.lchmod=t(e.lchmod),e.chownSync=n(e.chownSync),e.fchownSync=n(e.fchownSync),e.lchownSync=n(e.lchownSync),e.chmodSync=s(e.chmodSync),e.fchmodSync=s(e.fchmodSync),e.lchmodSync=s(e.lchmodSync),e.stat=c(e.stat),e.fstat=c(e.fstat),e.lstat=c(e.lstat),e.statSync=a(e.statSync),e.fstatSync=a(e.fstatSync),e.lstatSync=a(e.lstatSync),e.chmod&&!e.lchmod&&(e.lchmod=function(e,t,s){s&&process.nextTick(s)},e.lchmodSync=function(){}),e.chown&&!e.lchown&&(e.lchown=function(e,t,s,r){r&&process.nextTick(r)},e.lchownSync=function(){}),"win32"===i&&(e.rename="function"!=typeof e.rename?e.rename:function(t){function s(s,r,o){var n=Date.now(),i=0;t(s,r,(function c(a){if(a&&("EACCES"===a.code||"EPERM"===a.code||"EBUSY"===a.code)&&Date.now()-n<6e4)return setTimeout((function(){e.stat(r,(function(e,n){e&&"ENOENT"===e.code?t(s,r,c):o(a)}))}),i),void(i<100&&(i+=10));o&&o(a)}))}return Object.setPrototypeOf&&Object.setPrototypeOf(s,t),s}(e.rename)),e.read="function"!=typeof e.read?e.read:function(t){function s(s,r,o,n,i,c){var a;if(c&&"function"==typeof c){var l=0;a=function(u,f,d){if(u&&"EAGAIN"===u.code&&l<10)return l++,t.call(e,s,r,o,n,i,a);c.apply(this,arguments)}}return t.call(e,s,r,o,n,i,a)}return Object.setPrototypeOf&&Object.setPrototypeOf(s,t),s}(e.read),e.readSync="function"!=typeof e.readSync?e.readSync:(u=e.readSync,function(t,s,r,o,n){for(var i=0;;)try{return u.call(e,t,s,r,o,n)}catch(e){if("EAGAIN"===e.code&&i<10){i++;continue}throw e}})}},6813:(e,t,s)=>{let r;try{r=s(77)}catch(e){r=s(7147)}const o=s(8981),{stringify:n,stripBom:i}=s(6780),c={readFile:o.fromPromise((async function(e,t={}){"string"==typeof t&&(t={encoding:t});const s=t.fs||r,n=!("throws"in t)||t.throws;let c,a=await o.fromCallback(s.readFile)(e,t);a=i(a);try{c=JSON.parse(a,t?t.reviver:null)}catch(t){if(n)throw t.message=`${e}: ${t.message}`,t;return null}return c})),readFileSync:function(e,t={}){"string"==typeof t&&(t={encoding:t});const s=t.fs||r,o=!("throws"in t)||t.throws;try{let r=s.readFileSync(e,t);return r=i(r),JSON.parse(r,t.reviver)}catch(t){if(o)throw t.message=`${e}: ${t.message}`,t;return null}},writeFile:o.fromPromise((async function(e,t,s={}){const i=s.fs||r,c=n(t,s);await o.fromCallback(i.writeFile)(e,c,s)})),writeFileSync:function(e,t,s={}){const o=s.fs||r,i=n(t,s);return o.writeFileSync(e,i,s)}};e.exports=c},6780:e=>{e.exports={stringify:function(e,{EOL:t="\n",finalEOL:s=!0,replacer:r=null,spaces:o}={}){const n=s?t:"";return JSON.stringify(e,r,o).replace(/\n/g,t)+n},stripBom:function(e){return Buffer.isBuffer(e)&&(e=e.toString("utf8")),e.replace(/^\uFEFF/,"")}}},7363:(e,t,s)=>{"use strict";Object.defineProperty(t,"__esModule",{value:!0}),t.registerCreateChatGPTView=void 0;const r=s(9496),o=s(6677);let n;class i{constructor(e){this.context=e,this.context=e}resolveWebviewView(e){this.webview=e.webview,e.webview.options={enableScripts:!0},e.webview.html=(0,o.getHtmlForWebview)(this.context,e.webview),e.webview.onDidReceiveMessage((e=>{"webviewLoaded"===e.cmd&&console.log("反馈消息:",e)}))}removeWebView(){this.webview=void 0}}const c=e=>{r.commands.executeCommand("workbench.view.extension.DiFlow").then((()=>{r.commands.executeCommand("setContext","DiFlow.chatGPTView",!0).then((()=>{const t=r.workspace.getConfiguration("DiFlow"),s=t.get("hostname"),o=t.get("apiKey"),i=t.get("model");setTimeout((()=>{n&&n?.webview&&n.webview.postMessage({cmd:"vscodePushTask",task:"route",data:{path:"/chat-gpt-view",query:{hostname:s,apiKey:o,selectedText:e,model:i}}})}),500)}))}))};t.registerCreateChatGPTView=e=>{n=new i(e),e.subscriptions.push(r.window.registerWebviewViewProvider("DiFlow.chatGPTView",n,{webviewOptions:{retainContextWhenHidden:!0}})),e.subscriptions.push(r.commands.registerCommand("DiFlow.openChatGPTView",(()=>{c()})),r.commands.registerCommand("DiFlow.hideChatGPTView",(()=>{r.commands.executeCommand("setContext","DiFlow.chatGPTView",!1).then((()=>{n?.removeWebView()}))})),r.commands.registerCommand("DiFlow.explainByChatGPT",(()=>{const e=r.window.activeTextEditor;if(e){const t=e.document.getText(e.selection);if(!t)return void r.window.showInformationMessage("没有选中的文本");const s=r.workspace.getConfiguration("DiFlow"),o=s.get("hostname"),n=s.get("apiKey");if(!o)return void r.window.showInformationMessage("请先设置插件 DiFlow 的 hostname，点击左侧标签栏 DiFlow 的图标进行设置");if(!n)return void r.window.showInformationMessage("请先设置插件 DiFlow 的 apiKey，点击左侧标签栏 DiFlow 的图标进行设置");c(t)}else r.window.showInformationMessage("没有活动的文本编辑器")})))}},7413:(e,t,s)=>{"use strict";Object.defineProperty(t,"__esModule",{value:!0}),t.registerCreateScript=void 0;const r=s(9496),o=s(1017),n=s(9496),i=s(5674);async function c(e,t){await i.ensureDir(t);const s=await i.readdir(e);for(const r of s){const s=o.join(e,r),n=o.join(t,r);(await i.stat(s)).isDirectory()?await c(s,n):await i.copyFile(s,n)}}t.registerCreateScript=e=>{e.subscriptions.push(n.commands.registerCommand("DiFlow.createScript",(async e=>{const t=r.workspace.rootPath||"",s=o.join(t,"materials","blocks"),n=e._fsPath;if(s)if(n)try{await c(s,n),r.window.showInformationMessage("复制文件夹内容成功")}catch(e){r.window.showErrorMessage("复制文件夹内容失败")}else r.window.showErrorMessage("请选择目标文件夹");else r.window.showErrorMessage("请选择来源文件夹")})))}},4116:(e,t,s)=>{"use strict";Object.defineProperty(t,"__esModule",{value:!0}),t.registerCreateSetting=void 0;const r=s(9496);t.registerCreateSetting=e=>{e.subscriptions.push(r.commands.registerCommand("DiFlow.openSetting",(()=>{r.commands.executeCommand("workbench.action.openSettings","DiFlow")})))}},7093:(e,t,s)=>{"use strict";Object.defineProperty(t,"__esModule",{value:!0}),t.registerCreateSnippets=void 0;const r=s(9496),o=s(6677);t.registerCreateSnippets=e=>{e.subscriptions.push(r.commands.registerCommand("DiFlow.createSnippets",(async()=>{(0,o.showWebView)(e,{key:"main",title:"添加代码片段",viewColumn:1,task:{task:"route",data:{path:"/add-snippets"}}})})))}},6862:(e,t,s)=>{"use strict";Object.defineProperty(t,"__esModule",{value:!0}),t.registerCursorManagement=t.registerCursorIntegration=t.CursorIntegration=void 0;const r=s(7147),o=s(1017),n=s(2037),i=s(9496),c=s(6677);t.CursorIntegration=class{constructor(){this.configPaths={},this.platform=n.platform(),this.detectConfigPaths()}setCustomInstallPath(e){console.log("设置自定义 Cursor 安装路径:",e),this.configPaths.customInstallPath=e,this.detectConfigPaths()}detectConfigPaths(){console.log("开始动态检测 Cursor 配置路径..."),this.configPaths.settingsPath=this.findSettingsPath(),this.configPaths.mcpPath=this.findMcpPath(),this.configPaths.rulesPath=this.findRulesPath(),this.configPaths.cliPath=this.findCliPath(),console.log("配置路径检测结果:",this.configPaths)}findSettingsPath(){const e=n.homedir(),t=[];if("win32"===this.platform)t.push(o.join(e,"AppData","Roaming","Cursor","User","settings.json"),o.join(e,"AppData","Local","Cursor","User","settings.json"));else if("darwin"===this.platform){const s=o.join(e,"Library","Application Support","Cursor","User","settings.json");t.push(s),console.log("macOS 配置文件路径:",s)}else t.push(o.join(e,".config","Cursor","User","settings.json"),o.join(e,".cursor","settings.json"));for(const e of t)if(console.log("检查配置文件路径:",e),r.existsSync(e))return console.log("找到 settings.json:",e),e;console.log("未找到 settings.json 文件，检查的路径:",t)}findMcpPath(){const e=n.homedir(),t=o.join(e,".cursor","mcp.json");if(console.log("检查 Cursor MCP 配置路径:",t),r.existsSync(t))return console.log("找到 Cursor MCP 配置文件:",t),t;const s=[o.join(e,"mcp.json"),o.join(e,"Library","Application Support","Cursor","User","mcp.json"),o.join(e,"AppData","Roaming","Cursor","User","mcp.json"),o.join(e,".config","Cursor","User","mcp.json")];console.log("检查备用 MCP 配置路径:",s);for(const e of s)if(console.log("检查备用 MCP 路径:",e),r.existsSync(e))return console.log("找到备用 MCP 配置文件:",e),e;return console.log("使用默认 MCP 配置路径:",t),t}findRulesPath(){const e=o.join(process.cwd(),".cursorrules");if(r.existsSync(e))return console.log("找到工作区 .cursorrules:",e),e;const t=o.join(n.homedir(),".cursorrules");return r.existsSync(t)?(console.log("找到用户主目录 .cursorrules:",t),t):(console.log("使用默认 .cursorrules 路径:",e),e)}findCliPath(){try{const{execSync:e}=s(2081);if(this.configPaths.customInstallPath){const e=this.getCliPathsFromInstallDir(this.configPaths.customInstallPath);for(const t of e)if(r.existsSync(t))return console.log("找到自定义路径 CLI:",t),t}try{const t=e("win32"===this.platform?"where cursor":"which cursor",{encoding:"utf8",timeout:3e3}).trim().split("\n")[0];if(t&&r.existsSync(t))return console.log("通过 which/where 找到 CLI:",t),t}catch(e){console.log("which/where 命令未找到 cursor")}return"darwin"===this.platform?this.findCliMacOS():"win32"===this.platform?this.findCliWindows():this.findCliLinux()}catch(e){return void console.error("查找 CLI 工具时出错:",e)}}getCliPathsFromInstallDir(e){const t=[];return"darwin"===this.platform?e.endsWith(".app")?t.push(o.join(e,"Contents","Resources","app","bin","cursor"),o.join(e,"Contents","MacOS","Cursor"),o.join(e,"Contents","Resources","cursor")):t.push(e):"win32"===this.platform?e.endsWith(".exe")?t.push(e):t.push(o.join(e,"Cursor.exe"),o.join(e,"cursor.exe")):t.push(e,o.join(e,"cursor")),t}findCliMacOS(){try{const{execSync:e}=s(2081),t=["/Applications/Cursor.app",o.join(n.homedir(),"Applications","Cursor.app")];try{console.log("使用 mdfind 搜索 Cursor 应用...");const s=e('mdfind "kMDItemCFBundleIdentifier == com.todesktop.230313mzl4w4u92" 2>/dev/null',{encoding:"utf8",timeout:5e3}).trim();s&&t.push(...s.split("\n"))}catch(e){console.log("mdfind 查找失败，将继续使用常规路径搜索...")}const i=[...new Set(t)].filter(Boolean);console.log("正在搜索以下应用路径:",i);for(const e of i)if(e&&r.existsSync(e)){console.log("找到潜在的 Cursor 应用:",e);const t=o.join(e,"Contents","Resources","app","bin","cursor");if(r.existsSync(t))return console.log("成功找到 macOS CLI:",t),t}}catch(e){console.error("macOS CLI 查找出错:",e)}console.log("在 macOS 上未找到任何可执行的 Cursor CLI 工具。")}findCliWindows(){const e=[o.join(n.homedir(),"AppData","Local","Programs","cursor","Cursor.exe"),o.join("C:","Program Files","Cursor","Cursor.exe"),o.join("C:","Program Files (x86)","Cursor","Cursor.exe")];for(const t of e)if(r.existsSync(t))return console.log("找到 Windows CLI:",t),t}findCliLinux(){const e=["/usr/bin/cursor","/usr/local/bin/cursor",o.join(n.homedir(),".local","bin","cursor"),"/opt/cursor/cursor","/snap/bin/cursor"];for(const t of e)if(r.existsSync(t))return console.log("找到 Linux CLI:",t),t}async isCursorInstalled(){try{console.log("=== Cursor 安装检测开始 ==="),this.detectConfigPaths(),console.log("=== 强制检测步骤 ===");const e={app:"/Applications/Cursor.app",cli:"/Applications/Cursor.app/Contents/Resources/app/bin/cursor",settings:o.join(n.homedir(),"Library","Application Support","Cursor","User","settings.json")};let t=!1;if(console.log("强制检测路径:",e),r.existsSync(e.app)&&(console.log("✅ 强制检测: 找到 Cursor 应用"),t=!0),r.existsSync(e.cli)&&(console.log("✅ 强制检测: 找到 Cursor CLI"),this.configPaths.cliPath=e.cli,t=!0),r.existsSync(e.settings)&&(console.log("✅ 强制检测: 找到 Cursor 配置文件"),this.configPaths.settingsPath=e.settings,t=!0),t)return console.log("=== 强制检测成功，Cursor 已安装 ==="),!0;if(this.configPaths.cliPath&&r.existsSync(this.configPaths.cliPath))return console.log(`检测成功: 找到 CLI 工具路径 '${this.configPaths.cliPath}'`),!0;if(console.log("检测信息: 未能通过 CLI 路径直接确认安装。"),this.configPaths.settingsPath&&r.existsSync(this.configPaths.settingsPath))return console.log(`检测成功: 找到配置文件路径 '${this.configPaths.settingsPath}'`),!0;if(console.log("检测信息: 未能通过配置文件确认安装。"),this.checkAppInstallation())return console.log("检测成功: 找到了应用安装目录 (但未找到明确的 CLI 或配置文件)。"),!0;console.log("检测信息: 未能通过应用目录确认安装。");try{const{execSync:e}=s(2081);return e("cursor --version",{timeout:3e3,stdio:"ignore"}),console.log("检测成功: `cursor --version` 命令执行成功。"),!0}catch(e){console.log(`检测信息: 'cursor --version' 命令执行失败: ${e.message}`)}return console.log("=== Cursor 未检测到 ==="),!1}catch(e){return console.error("检测 Cursor 安装状态时发生意外错误:",e),!1}}checkAppInstallation(){try{if("darwin"===this.platform){const e=["/Applications/Cursor.app",o.join(n.homedir(),"Applications","Cursor.app")];for(const t of e)if(r.existsSync(t))return console.log("找到 Cursor 应用:",t),!0}else if("win32"===this.platform){const e=[o.join(n.homedir(),"AppData","Local","Programs","cursor"),o.join("C:","Program Files","Cursor"),o.join("C:","Program Files (x86)","Cursor")];for(const t of e)if(r.existsSync(t))return console.log("找到 Cursor 安装目录:",t),!0}else{const e=["/opt/cursor","/usr/local/bin/cursor","/usr/bin/cursor",o.join(n.homedir(),".local","bin","cursor")];for(const t of e)if(r.existsSync(t))return console.log("找到 Cursor 安装:",t),!0}}catch(e){console.error("检查应用安装时出错:",e)}return!1}async getCursorSettings(){const e={};try{if(this.configPaths.rulesPath&&r.existsSync(this.configPaths.rulesPath)?e.rules=r.readFileSync(this.configPaths.rulesPath,"utf-8"):e.rules="",this.configPaths.settingsPath&&r.existsSync(this.configPaths.settingsPath)){const t=r.readFileSync(this.configPaths.settingsPath,"utf-8");try{e.generalConfig=JSON.parse(t)}catch(t){console.warn("解析 settings.json 失败:",t),e.generalConfig={}}}else e.generalConfig={};if(this.configPaths.mcpPath&&r.existsSync(this.configPaths.mcpPath)){const t=r.readFileSync(this.configPaths.mcpPath,"utf-8");try{e.mcpConfig=JSON.parse(t)}catch(t){console.warn("解析 MCP 配置失败:",t),e.mcpConfig={mcpServers:{}}}}else e.mcpConfig={mcpServers:{}}}catch(e){throw console.error("获取 Cursor 设置失败:",e),new Error(`获取 Cursor 设置失败: ${e}`)}return e}async updateCursorSettings(e){try{if(void 0!==e.rules&&this.configPaths.rulesPath){const t=o.dirname(this.configPaths.rulesPath);r.existsSync(t)||r.mkdirSync(t,{recursive:!0}),r.writeFileSync(this.configPaths.rulesPath,e.rules,"utf-8")}if(void 0!==e.generalConfig&&this.configPaths.settingsPath){const t=o.dirname(this.configPaths.settingsPath);r.existsSync(t)||r.mkdirSync(t,{recursive:!0});let s={};if(r.existsSync(this.configPaths.settingsPath))try{const e=r.readFileSync(this.configPaths.settingsPath,"utf-8");s=JSON.parse(e)}catch(e){console.warn("解析现有 settings.json 失败，将创建新配置:",e)}const n={...s,...e.generalConfig};r.writeFileSync(this.configPaths.settingsPath,JSON.stringify(n,null,2),"utf-8")}if(void 0!==e.mcpConfig&&this.configPaths.mcpPath){const t=o.dirname(this.configPaths.mcpPath);r.existsSync(t)||r.mkdirSync(t,{recursive:!0});let s={mcpServers:{}};if(r.existsSync(this.configPaths.mcpPath))try{const e=r.readFileSync(this.configPaths.mcpPath,"utf-8");s=JSON.parse(e)}catch(e){console.warn("解析现有 MCP 配置失败，将创建新配置:",e)}const n={...s,...e.mcpConfig,mcpServers:{...s.mcpServers,...e.mcpConfig.mcpServers}};r.writeFileSync(this.configPaths.mcpPath,JSON.stringify(n,null,2),"utf-8")}return!0}catch(e){throw console.error("更新 Cursor 设置失败:",e),new Error(`更新 Cursor 设置失败: ${e}`)}}async openCursor(e){try{const{exec:t}=s(2081);let r;if("darwin"===this.platform)r=e?`open -a "Cursor" "${e}"`:'open -a "Cursor" --new';else{const t=this.configPaths.cliPath||"cursor";r=`"${t}"`,r+=e?` "${e}"`:" --new-window"}return console.log("执行命令:",r),new Promise(((e,s)=>{t(r,((t,r,o)=>{t?(console.error("打开 Cursor 失败:",t),s(new Error(`打开 Cursor 失败: ${t.message}`))):(console.log("Cursor 打开成功"),e(!0))}))}))}catch(e){throw console.error("打开 Cursor 失败:",e),new Error(`打开 Cursor 失败: ${e}`)}}async openCursorChat(e){try{console.log("尝试打开 Cursor Chat...");const t=["aichat.newchat","aichat.newchataction","workbench.action.chat.open","workbench.action.chat.newChat","workbench.panel.chat.view.copilot.focus","workbench.action.openChat","cursor.chat.focus","cursor.chat.new"];for(const s of t)try{if(console.log(`尝试执行命令: ${s}`),e?await i.commands.executeCommand(s,{query:e}):await i.commands.executeCommand(s),console.log(`成功执行命令: ${s}`),e){await new Promise((e=>setTimeout(e,800)));try{await i.commands.executeCommand("type",{text:e}),await new Promise((e=>setTimeout(e,200))),await i.commands.executeCommand("workbench.action.acceptSelectedSuggestion"),console.log("成功发送消息到聊天")}catch(t){console.log("直接输入失败，消息已复制到剪贴板"),await this.copyToClipboard(e)}}return!0}catch(e){console.log(`命令 ${s} 执行失败:`,e)}try{return console.log("尝试使用快捷键打开聊天..."),await i.commands.executeCommand("workbench.action.quickOpen"),await new Promise((e=>setTimeout(e,300))),await i.commands.executeCommand("type",{text:">chat"}),await new Promise((e=>setTimeout(e,200))),await i.commands.executeCommand("workbench.action.acceptSelectedSuggestion"),e&&(await new Promise((e=>setTimeout(e,500))),await this.copyToClipboard(e),console.log("聊天界面已打开，消息已复制到剪贴板")),!0}catch(e){console.log("快捷键方法失败:",e)}if(e){await this.copyToClipboard(e),console.log("所有自动打开方法都失败了，消息已复制到剪贴板，请手动打开聊天界面并粘贴");try{s(9496).window.showInformationMessage("消息已复制到剪贴板，请手动打开 Cursor Chat 并粘贴","确定")}catch(e){console.log("无法显示通知:",e)}return!0}return console.log("无法打开 Cursor Chat"),!1}catch(t){if(console.error("打开 Cursor Chat 失败:",t),e)try{return await this.copyToClipboard(e),console.log("发生错误，但消息已复制到剪贴板"),!0}catch(e){console.error("复制到剪贴板也失败了:",e)}throw t}}async copyToClipboard(e){try{const{exec:t}=s(2081),r=e.replace(/'/g,"'\"'\"'");let o;o="darwin"===this.platform?`echo '${r}' | pbcopy`:"win32"===this.platform?`echo ${r} | clip`:`echo '${r}' | xclip -selection clipboard`,await new Promise(((e,s)=>{t(o,(t=>{t?s(t):e()}))})),console.log("文本已复制到剪贴板")}catch(e){throw console.error("复制到剪贴板失败:",e),e}}async getMcpServers(){try{this.detectConfigPaths();const e=this.configPaths.mcpPath;if(console.log("获取 MCP 服务器 - 使用路径:",e),!e||!r.existsSync(e))return console.log("MCP configuration file not found:",e),{};const t=r.readFileSync(e,"utf8"),s=JSON.parse(t);return console.log("MCP 配置内容:",s),s.mcpServers?s.mcpServers:s}catch(e){return console.error("Error reading MCP configuration:",e),{}}}async addMcpServer(e,t){try{const s=await this.getCursorSettings();return s.mcpConfig||(s.mcpConfig={mcpServers:{}}),s.mcpConfig.mcpServers||(s.mcpConfig.mcpServers={}),s.mcpConfig.mcpServers[e]=t,await this.updateCursorSettings({mcpConfig:s.mcpConfig})}catch(e){throw console.error("添加 MCP 服务器失败:",e),e}}async removeMcpServer(e){try{const t=await this.getCursorSettings();if(t.mcpConfig?.mcpServers?.[e]){if(delete t.mcpConfig.mcpServers[e],this.configPaths.mcpPath){const e=o.dirname(this.configPaths.mcpPath);r.existsSync(e)||r.mkdirSync(e,{recursive:!0}),r.writeFileSync(this.configPaths.mcpPath,JSON.stringify(t.mcpConfig,null,2),"utf-8")}return console.log(`MCP 服务器 ${e} 已删除`),!0}return console.log(`MCP 服务器 ${e} 不存在`),!0}catch(e){throw console.error("删除 MCP 服务器失败:",e),e}}async getUserRules(){try{const e=this.findRulesPath();if(!e||!r.existsSync(e))return console.log("Rules file not found:",e),"";const t=r.readFileSync(e,"utf8");return console.log("读取到的规则内容:",t),t}catch(e){return console.error("Error reading user rules:",e),""}}async updateUserRules(e){try{const t=this.findRulesPath();if(!t)return console.error("Rules path not found"),!1;const s=o.dirname(t);return r.existsSync(s)||r.mkdirSync(s,{recursive:!0}),r.writeFileSync(t,e,"utf8"),console.log("规则已保存到:",t),!0}catch(e){return console.error("Error updating user rules:",e),!1}}async getCursorUserInfo(){try{let e;if(console.log("=== 开始获取 Cursor 用户信息 ==="),this.detectConfigPaths(),e="darwin"===this.platform?o.join(n.homedir(),"Library/Application Support/Cursor/User/globalStorage/state.vscdb"):"win32"===this.platform?o.join(n.homedir(),"AppData/Roaming/Cursor/User/globalStorage/state.vscdb"):o.join(n.homedir(),".config/Cursor/User/globalStorage/state.vscdb"),console.log("SQLite 数据库路径:",e),!r.existsSync(e))return console.log("❌ Cursor SQLite 数据库不存在"),{isLoggedIn:!1};console.log("✅ 找到 Cursor SQLite 数据库");const{exec:t}=s(2081),{promisify:i}=s(3837),c=i(t);try{const t="\n          SELECT key, value \n          FROM ItemTable \n          WHERE key LIKE 'cursorAuth/%'\n        ",{stdout:s}=await c(`sqlite3 "${e}" "${t}"`,{encoding:"utf8"});console.log("数据库查询结果:",s);const r=s.trim().split("\n"),o={};for(const e of r)if(e.includes("|")){const[t,s]=e.split("|",2);t&&s&&(o[t]=s)}console.log("解析的认证数据:",o);const n=o["cursorAuth/cachedEmail"],i=o["cursorAuth/stripeMembershipType"],a=o["cursorAuth/accessToken"],l=o["cursorAuth/refreshToken"],u=!(!n||!a&&!l);return console.log("=== 最终检测结果 ==="),console.log("邮箱:",n||"未找到"),console.log("会员类型:",i||"未找到"),console.log("登录状态:",u),{isLoggedIn:u,email:n,username:n?n.split("@")[0]:void 0,cursorUserId:n,avatar:"",membershipType:i,token:a}}catch(e){return console.error("❌ 数据库查询失败:",e),console.log("=== 尝试备用方法：读取 settings.json ==="),await this.getCursorUserInfoFromSettings()}}catch(e){return console.error("❌ 获取 Cursor 用户信息失败:",e),{isLoggedIn:!1}}}async getCursorUserInfoFromSettings(){try{if(console.log("使用备用方法从 settings.json 读取用户信息"),!this.configPaths.settingsPath||!r.existsSync(this.configPaths.settingsPath))return console.log("❌ Cursor 设置文件不存在"),{isLoggedIn:!1};console.log("✅ 找到 Cursor 设置文件");const e=r.readFileSync(this.configPaths.settingsPath,"utf-8");console.log("设置文件内容长度:",e.length);const t=JSON.parse(e),s=["cursor.account.email","account.email","cursor.pro.email","cursor.subscription.email","cursor.session.email","cursor.login.email","cursor.user.email","user.email","email","userEmail","loginEmail","accountEmail"],o=["cursor.account.name","account.name","cursor.pro.name","cursor.subscription.name","cursor.session.name","cursor.login.name","cursor.user.name","user.name","name","userName","loginName","accountName","displayName"];let n,i;for(const e of s)if(t[e]){console.log(`✅ 在字段 '${e}' 找到邮箱:`,t[e]),n=t[e];break}for(const e of o)if(t[e]){console.log(`✅ 在字段 '${e}' 找到用户名:`,t[e]),i=t[e];break}if(!n){console.log("=== 开始深度搜索邮箱 ===");const e=(t,s="")=>{for(const[r,o]of Object.entries(t)){const t=s?`${s}.${r}`:r;if("string"==typeof o&&o.includes("@")&&o.includes("."))return console.log(`✅ 深度搜索在 '${t}' 找到可能的邮箱:`,o),o;if("object"==typeof o&&null!==o&&!Array.isArray(o)){const s=e(o,t);if(s)return s}}};n=e(t)}return console.log("=== 备用方法检测结果 ==="),console.log("邮箱:",n||"未找到"),console.log("用户名:",i||"未找到"),console.log("登录状态:",!!n),{isLoggedIn:!!n,email:n,username:i,cursorUserId:n,avatar:"",membershipType:"",token:""}}catch(e){return console.error("❌ 备用方法获取用户信息失败:",e),{isLoggedIn:!1}}}async isCursorLoggedIn(){return(await this.getCursorUserInfo()).isLoggedIn}getSystemInfo(){return{platform:this.platform,version:process.version,isLoggedIn:!1,cursorPath:this.configPaths.customInstallPath||this.configPaths.cliPath||"未找到",configPath:this.configPaths.settingsPath||"未找到",mcpPath:this.configPaths.mcpPath||"未找到",rulesPath:this.configPaths.rulesPath||"未找到",cliPath:this.configPaths.cliPath||"未找到"}}},t.registerCursorIntegration=e=>{e.subscriptions.push(i.commands.registerCommand("DiFlow.getCursorSettings",(async()=>{(0,c.showWebView)(e,{key:"main",title:"Cursor 管理",viewColumn:1,task:{task:"route",data:{path:"/cursor"}}})}))),e.subscriptions.push(i.commands.registerCommand("DiFlow.updateCursorSettings",(async()=>{(0,c.showWebView)(e,{key:"main",title:"Cursor 管理",viewColumn:1,task:{task:"route",data:{path:"/cursor"}}})}))),e.subscriptions.push(i.commands.registerCommand("DiFlow.openCursorChat",(async()=>{(0,c.showWebView)(e,{key:"main",title:"Cursor 管理",viewColumn:1,task:{task:"route",data:{path:"/cursor"}}})})))},t.registerCursorManagement=e=>{e.subscriptions.push(i.commands.registerCommand("DiFlow.cursorManagement",(async()=>{(0,c.showWebView)(e,{key:"cursor",title:"Cursor 管理",viewColumn:1,task:{task:"route",data:{path:"/cursor"}}})})))}},6677:(e,t,s)=>{"use strict";Object.defineProperty(t,"__esModule",{value:!0}),t.getHtmlForWebview=t.showWebView=void 0;const r=s(9496),o=s(3912),n=s(6862),i=s(1017);s(7147);let c=[];const a=new n.CursorIntegration;t.showWebView=(e,s)=>{const o=c.find((e=>e.key===s.key));if(o)o.panel.reveal(),s.task&&o.panel.webview.postMessage({cmd:"vscodePushTask",task:s.task.task,data:s.task.data});else{const o=r.window.createWebviewPanel("DiFlow",s.title||"DiFlow",{viewColumn:s.viewColumn||r.ViewColumn.Two},{enableScripts:!0,retainContextWhenHidden:!0});o.iconPath=r.Uri.file(i.join(e.extensionPath,"images","title.jpg")),o.webview.html=(0,t.getHtmlForWebview)(e,o.webview);const n=[];o.webview.onDidReceiveMessage((async t=>{"webviewLoaded"===t.cmd&&s.task&&o.webview.postMessage({cmd:"vscodePushTask",task:s?.task?.task,data:s?.task?.data}),u[t.cmd]&&u[t.cmd](e,t)}),null,n),o.onDidDispose((()=>{for(o.dispose();n.length;){const e=n.pop();e&&e.dispose()}c=c.filter((e=>e.key!==s.key))}),null,n),c.push({key:s.key,panel:o,disposables:n})}},t.getHtmlForWebview=(e,t)=>{const s=e.extensionMode===r.ExtensionMode.Production;let o="";if(console.log("isProduction",s),s){console.log("webview-dist/main.mjs");const s=r.Uri.file(i.join(e.extensionPath,"webview-dist","main.mjs"));o=t.asWebviewUri(s)}else console.log("localhost:7979/src/main.ts"),o="http://localhost:7979/src/main.ts";return l(o)};const l=e=>`<!doctype html>\n    <html lang="en">\n    <head>\n      <meta charset="UTF-8">\n      <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">\n      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' vscode-webview: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; style-src 'unsafe-inline' vscode-webview: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; connect-src vscode-webview: http://localhost:* https://localhost:* ws://localhost:* wss://localhost:* http://127.0.0.1:* https://127.0.0.1:* ws://127.0.0.1:* wss://127.0.0.1:*; img-src vscode-webview: data: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; font-src vscode-webview: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*;">\n      <title>webview-react</title>\n      <script>\n         window.vscode = acquireVsCodeApi();\n         window.process = {\n           env: {\n             NODE_ENV: "production",\n           },\n         }\n         // 添加调试信息\n         console.log("Webview CSP configured for localhost and 127.0.0.1");\n      <\/script>\n    </head>\n    <body>\n      <div id="app"></div>\n      <script  type="module" src="${e}"><\/script>\n    </body>\n    </html>`,u={addSnippets:o.addSnippets,getCursorSettings:async(e,t)=>{try{console.log("获取 Cursor 设置...");const e=await a.getCursorSettings();console.log("Cursor 设置:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,data:e}})}catch(e){console.error("getCursorSettings task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e.message}})}},updateCursorSettings:async(e,t)=>{try{console.log("更新 Cursor 设置...",t.data);const e=await a.updateCursorSettings(t.data);console.log("更新 Cursor 设置结果:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,data:e}})}catch(e){console.error("updateCursorSettings task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e.message}})}},openCursorChat:async(e,t)=>{try{console.log("打开 Cursor 聊天...",t.data);const e=await a.openCursorChat(t.data?.message);console.log("打开 Cursor 聊天结果:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,data:e}})}catch(e){console.error("openCursorChat task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e.message}})}},getMcpServers:async(e,t)=>{try{console.log("获取 MCP 服务器列表...");const e=await a.getMcpServers();console.log("MCP 服务器列表:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,data:e}})}catch(e){console.error("getMcpServers task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e.message}})}},addMcpServer:async(e,t)=>{try{console.log("添加 MCP 服务器...",t.data);const{name:e,config:s}=t.data,r=await a.addMcpServer(e,s);console.log("添加 MCP 服务器结果:",r);const o=c.filter((e=>"cursor"===e.key||"main"===e.key));o.length>0&&t.cbid&&o[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,data:r}})}catch(e){console.error("addMcpServer task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e.message}})}},removeMcpServer:async(e,t)=>{try{console.log("删除 MCP 服务器...",t.data);const e=await a.removeMcpServer(t.data.name);console.log("删除 MCP 服务器结果:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,data:e}})}catch(e){console.error("removeMcpServer task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e.message}})}},getUserRules:async(e,t)=>{try{console.log("获取用户规则...");const e=await a.getUserRules();console.log("用户规则:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,data:e}})}catch(e){console.error("getUserRules task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e.message}})}},updateUserRules:async(e,t)=>{try{console.log("更新用户规则...",t.data);const e=await a.updateUserRules(t.data.rules);console.log("更新用户规则结果:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,data:e}})}catch(e){console.error("updateUserRules task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e.message}})}},getSystemInfo:async(e,t)=>{try{console.log("获取系统信息...");const e=a.getSystemInfo();console.log("系统信息:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,data:e}})}catch(e){console.error("getSystemInfo task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e.message}})}},isCursorInstalled:async(e,t)=>{try{console.log("开始检测 Cursor 安装状态...");const e=await a.isCursorInstalled();console.log("Cursor 安装检测结果:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,data:e}})}catch(e){console.error("isCursorInstalled task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e instanceof Error?e.message:String(e)}})}},openCursor:async(e,t)=>{try{console.log("打开 Cursor...",t.data);const e=await a.openCursor(t.data?.filePath);console.log("打开 Cursor 结果:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,data:e}})}catch(e){console.error("openCursor task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e.message}})}},setCustomInstallPath:async(e,t)=>{try{console.log("setCustomInstallPath 收到数据:",t.data);const e=t.data.path||t.data.customPath;if(!e)throw new Error("未提供安装路径");console.log("设置自定义安装路径:",e),a.setCustomInstallPath(e);const s=await a.isCursorInstalled(),r=a.getSystemInfo();console.log("重新检测结果:",{isInstalled:s,systemInfo:r});const o=c.filter((e=>"cursor"===e.key||"main"===e.key));o.length>0&&t.cbid&&o[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,isInstalled:s,systemInfo:r}})}catch(e){console.error("setCustomInstallPath task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e instanceof Error?e.message:String(e)}})}},getCursorUserInfo:async(e,t)=>{try{console.log("获取 Cursor 用户信息...");const e=await a.getCursorUserInfo();console.log("Cursor 用户信息:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,data:e}})}catch(e){console.error("getCursorUserInfo task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e.message}})}},isCursorLoggedIn:async(e,t)=>{try{console.log("检查 Cursor 登录状态...");const e=await a.isCursorLoggedIn();console.log("Cursor 登录状态:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,data:e}})}catch(e){console.error("isCursorLoggedIn task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e.message}})}},loginOrCreateUser:async(e,t)=>{try{console.log("获取Cursor用户信息...",t.data);const e=await a.getCursorUserInfo();console.log("Cursor用户信息:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,data:e}})}catch(e){console.error("loginOrCreateUser task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e.message}})}},syncUserData:async(e,t)=>{try{console.log("同步用户数据任务 - 由webview处理",t.data);const e=c.filter((e=>"cursor"===e.key||"main"===e.key));e.length>0&&t.cbid&&e[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,message:"任务已转发到webview处理"}})}catch(e){console.error("syncUserData task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e.message}})}},syncRulesToServer:async(e,t)=>{try{console.log("同步规则到服务器任务 - 由webview处理",t.data);const e=c.filter((e=>"cursor"===e.key||"main"===e.key));e.length>0&&t.cbid&&e[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,message:"任务已转发到webview处理"}})}catch(e){console.error("syncRulesToServer task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e.message}})}},syncMcpsToServer:async(e,t)=>{try{console.log("同步MCP配置到服务器任务 - 由webview处理",t.data);const e=c.filter((e=>"cursor"===e.key||"main"===e.key));e.length>0&&t.cbid&&e[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,message:"任务已转发到webview处理"}})}catch(e){console.error("syncMcpsToServer task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e.message}})}},networkRequest:async(e,t)=>{try{const{url:e,method:r="GET",headers:o={},body:n}=t.data;console.log(`网络请求: ${r} ${e}`);const i=s(5687),a=s(3685),{URL:l}=s(7310),u=new l(e),f="https:"===u.protocol,d=f?i:a,h={hostname:u.hostname,port:u.port||(f?443:80),path:u.pathname+u.search,method:r,headers:{"User-Agent":"DIFlow-VSCode-Extension/1.0.0",...o}},p=await new Promise(((e,t)=>{const s=d.request(h,(s=>{let r="";s.on("data",(e=>{r+=e})),s.on("end",(()=>{try{let t;try{t=JSON.parse(r)}catch{t=r}e({ok:s.statusCode>=200&&s.statusCode<300,status:s.statusCode,statusText:s.statusMessage,data:t,text:r,headers:s.headers})}catch(e){t(e)}}))}));s.on("error",(e=>{t(e)})),!n||"POST"!==r&&"PUT"!==r&&"PATCH"!==r||s.write("string"==typeof n?n:JSON.stringify(n)),s.end()}));console.log(`网络请求完成: ${r} ${e} - ${p.status}`);const m=c.filter((e=>"cursor"===e.key||"main"===e.key));m.length>0&&t.cbid&&m[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!0,data:p}})}catch(e){console.error("网络请求失败:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,error:e.message}})}},proxyRequest:async(e,t)=>{try{console.log("代理网络请求:",t.data);const{method:e,url:r,data:o,headers:n}=t.data,i=s(5687),a=s(3685),l=s(7310).parse(r),u="https:"===l.protocol,f=u?i:a,d={hostname:l.hostname,port:l.port||(u?443:80),path:l.path,method:e.toUpperCase(),headers:{"Content-Type":"application/json","User-Agent":"DIFlow-VSCode-Extension/1.0.0",...n},rejectUnauthorized:!1};console.log("代理请求选项:",d);const h=await new Promise(((t,s)=>{const r=f.request(d,(e=>{let s="";e.on("data",(e=>{s+=e})),e.on("end",(()=>{try{console.log("原始响应数据:",s);const r=s?JSON.parse(s):{};t({success:!0,status:e.statusCode,data:r,headers:e.headers})}catch(r){console.log("JSON解析失败，返回原始数据:",r),t({success:!0,status:e.statusCode,data:s,headers:e.headers})}}))}));if(r.on("error",(e=>{console.error("代理请求错误:",e),s({success:!1,message:`网络请求失败: ${e.message}`,error:e})})),r.setTimeout(1e4,(()=>{r.destroy(),s({success:!1,message:"请求超时",error:new Error("Request timeout")})})),o&&("POST"===e.toUpperCase()||"PUT"===e.toUpperCase())){const e=JSON.stringify(o);console.log("发送请求体数据:",e),r.write(e)}r.end()}));console.log("代理请求成功:",h);const p=c.filter((e=>"cursor"===e.key||"main"===e.key));p.length>0&&t.cbid&&p[0].panel.webview.postMessage({cbid:t.cbid,data:h})}catch(e){console.error("proxyRequest task failed:",e);const s=c.filter((e=>"cursor"===e.key||"main"===e.key));s.length>0&&t.cbid&&s[0].panel.webview.postMessage({cbid:t.cbid,data:{success:!1,message:e.message||"网络请求失败",error:e}})}}}},3912:(e,t,s)=>{"use strict";Object.defineProperty(t,"__esModule",{value:!0}),t.addSnippets=void 0;const r=s(9496),o=s(1017);t.addSnippets=(e,t)=>{const s=r.workspace.rootPath,n=o.join(s,".vscode/test.code-snippets"),i=r.Uri.file(n),c={[t.data.tips]:{prefix:t.data?.prefix,body:[t.data?.body],description:t.data?.description}};(async()=>{try{let e={};try{(await r.workspace.fs.stat(i)).type!==r.FileType.File&&await r.workspace.fs.writeFile(i,Buffer.from("","utf8"))}catch(e){await r.workspace.fs.writeFile(i,Buffer.from("","utf8"))}const s=await r.workspace.fs.readFile(i);s&&s.toString()&&(e=JSON.parse(s.toString())),e=e[c[t.data.tips].prefix]?c:{...e,...c};const o=JSON.stringify(e,null,2);await r.workspace.fs.writeFile(i,Buffer.from(o,"utf-8")),r.window.showInformationMessage("代码片段添加成功!")}catch(e){r.window.showErrorMessage(`代码片段添加失败: ${e}`)}})()}},8981:(e,t)=>{"use strict";t.fromCallback=function(e){return Object.defineProperty((function(...t){if("function"!=typeof t[t.length-1])return new Promise(((s,r)=>{t.push(((e,t)=>null!=e?r(e):s(t))),e.apply(this,t)}));e.apply(this,t)}),"name",{value:e.name})},t.fromPromise=function(e){return Object.defineProperty((function(...t){const s=t[t.length-1];if("function"!=typeof s)return e.apply(this,t);t.pop(),e.apply(this,t).then((e=>s(null,e)),s)}),"name",{value:e.name})}},9496:e=>{"use strict";e.exports=require("vscode")},9491:e=>{"use strict";e.exports=require("assert")},2081:e=>{"use strict";e.exports=require("child_process")},2057:e=>{"use strict";e.exports=require("constants")},7147:e=>{"use strict";e.exports=require("fs")},3685:e=>{"use strict";e.exports=require("http")},5687:e=>{"use strict";e.exports=require("https")},2037:e=>{"use strict";e.exports=require("os")},1017:e=>{"use strict";e.exports=require("path")},2781:e=>{"use strict";e.exports=require("stream")},7310:e=>{"use strict";e.exports=require("url")},3837:e=>{"use strict";e.exports=require("util")}},t={};function s(r){var o=t[r];if(void 0!==o)return o.exports;var n=t[r]={exports:{}};return e[r](n,n.exports,s),n.exports}var r={};(()=>{"use strict";var e=r;Object.defineProperty(e,"__esModule",{value:!0}),e.deactivate=e.activate=void 0;const t=s(7413),o=s(7093),n=s(4116),i=s(7363),c=s(6862);e.activate=function(e){(0,t.registerCreateScript)(e),(0,o.registerCreateSnippets)(e),(0,n.registerCreateSetting)(e),(0,i.registerCreateChatGPTView)(e),(0,c.registerCursorIntegration)(e),(0,c.registerCursorManagement)(e)},e.deactivate=function(){}})(),module.exports=r})();
+/******/ (() => { // webpackBootstrap
+/******/ 	var __webpack_modules__ = ([
+/* 0 */,
+/* 1 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.registerCreateScript = void 0;
+const vscode = __webpack_require__(2);
+const path = __webpack_require__(3);
+const vscode_1 = __webpack_require__(2);
+const fs = __webpack_require__(4);
+const registerCreateScript = (context) => {
+    context.subscriptions.push(vscode_1.commands.registerCommand("DiFlow.createScript", async (args) => {
+        const rootPath = vscode.workspace.rootPath || ""; // 获取当前右键文件夹位置作为目标源
+        // 指定复制源位置
+        const sourceFolderPath = path.join(rootPath, "materials", "blocks");
+        const targetFolderPath = args._fsPath;
+        if (!sourceFolderPath) {
+            vscode.window.showErrorMessage("请选择来源文件夹");
+            return;
+        }
+        if (!targetFolderPath) {
+            vscode.window.showErrorMessage("请选择目标文件夹");
+            return;
+        }
+        try {
+            await copyDirectoryContents(sourceFolderPath, targetFolderPath);
+            vscode.window.showInformationMessage("复制文件夹内容成功");
+        }
+        catch (error) {
+            vscode.window.showErrorMessage(`复制文件夹内容失败`);
+        }
+    }));
+};
+exports.registerCreateScript = registerCreateScript;
+async function copyDirectoryContents(sourcePath, targetPath) {
+    // 确保目标目录存在，如果不存在则创建
+    await fs.ensureDir(targetPath);
+    // 获取源目录的内容列表
+    const sourceItems = await fs.readdir(sourcePath);
+    // 遍历源目录的内容
+    for (const sourceItem of sourceItems) {
+        const sourceItemPath = path.join(sourcePath, sourceItem);
+        const targetItemPath = path.join(targetPath, sourceItem);
+        // 判断是文件还是文件夹
+        const isDirectory = (await fs.stat(sourceItemPath)).isDirectory();
+        if (isDirectory) {
+            // 如果是文件夹，递归复制子文件夹
+            await copyDirectoryContents(sourceItemPath, targetItemPath);
+        }
+        else {
+            // 如果是文件，直接复制
+            await fs.copyFile(sourceItemPath, targetItemPath);
+        }
+    }
+}
+
+
+/***/ }),
+/* 2 */
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("vscode");
+
+/***/ }),
+/* 3 */
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("path");
+
+/***/ }),
+/* 4 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+module.exports = {
+  // Export promiseified graceful-fs:
+  ...__webpack_require__(5),
+  // Export extra methods:
+  ...__webpack_require__(16),
+  ...__webpack_require__(25),
+  ...__webpack_require__(27),
+  ...__webpack_require__(33),
+  ...__webpack_require__(18),
+  ...__webpack_require__(40),
+  ...__webpack_require__(38),
+  ...__webpack_require__(21),
+  ...__webpack_require__(26)
+}
+
+
+/***/ }),
+/* 5 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+// This is adapted from https://github.com/normalize/mz
+// Copyright (c) 2014-2016 Jonathan Ong me@jongleberry.com and Contributors
+const u = (__webpack_require__(6).fromCallback)
+const fs = __webpack_require__(7)
+
+const api = [
+  'access',
+  'appendFile',
+  'chmod',
+  'chown',
+  'close',
+  'copyFile',
+  'fchmod',
+  'fchown',
+  'fdatasync',
+  'fstat',
+  'fsync',
+  'ftruncate',
+  'futimes',
+  'lchmod',
+  'lchown',
+  'link',
+  'lstat',
+  'mkdir',
+  'mkdtemp',
+  'open',
+  'opendir',
+  'readdir',
+  'readFile',
+  'readlink',
+  'realpath',
+  'rename',
+  'rm',
+  'rmdir',
+  'stat',
+  'symlink',
+  'truncate',
+  'unlink',
+  'utimes',
+  'writeFile'
+].filter(key => {
+  // Some commands are not available on some systems. Ex:
+  // fs.cp was added in Node.js v16.7.0
+  // fs.lchown is not available on at least some Linux
+  return typeof fs[key] === 'function'
+})
+
+// Export cloned fs:
+Object.assign(exports, fs)
+
+// Universalify async methods:
+api.forEach(method => {
+  exports[method] = u(fs[method])
+})
+
+// We differ from mz/fs in that we still ship the old, broken, fs.exists()
+// since we are a drop-in replacement for the native module
+exports.exists = function (filename, callback) {
+  if (typeof callback === 'function') {
+    return fs.exists(filename, callback)
+  }
+  return new Promise(resolve => {
+    return fs.exists(filename, resolve)
+  })
+}
+
+// fs.read(), fs.write(), fs.readv(), & fs.writev() need special treatment due to multiple callback args
+
+exports.read = function (fd, buffer, offset, length, position, callback) {
+  if (typeof callback === 'function') {
+    return fs.read(fd, buffer, offset, length, position, callback)
+  }
+  return new Promise((resolve, reject) => {
+    fs.read(fd, buffer, offset, length, position, (err, bytesRead, buffer) => {
+      if (err) return reject(err)
+      resolve({ bytesRead, buffer })
+    })
+  })
+}
+
+// Function signature can be
+// fs.write(fd, buffer[, offset[, length[, position]]], callback)
+// OR
+// fs.write(fd, string[, position[, encoding]], callback)
+// We need to handle both cases, so we use ...args
+exports.write = function (fd, buffer, ...args) {
+  if (typeof args[args.length - 1] === 'function') {
+    return fs.write(fd, buffer, ...args)
+  }
+
+  return new Promise((resolve, reject) => {
+    fs.write(fd, buffer, ...args, (err, bytesWritten, buffer) => {
+      if (err) return reject(err)
+      resolve({ bytesWritten, buffer })
+    })
+  })
+}
+
+// Function signature is
+// s.readv(fd, buffers[, position], callback)
+// We need to handle the optional arg, so we use ...args
+exports.readv = function (fd, buffers, ...args) {
+  if (typeof args[args.length - 1] === 'function') {
+    return fs.readv(fd, buffers, ...args)
+  }
+
+  return new Promise((resolve, reject) => {
+    fs.readv(fd, buffers, ...args, (err, bytesRead, buffers) => {
+      if (err) return reject(err)
+      resolve({ bytesRead, buffers })
+    })
+  })
+}
+
+// Function signature is
+// s.writev(fd, buffers[, position], callback)
+// We need to handle the optional arg, so we use ...args
+exports.writev = function (fd, buffers, ...args) {
+  if (typeof args[args.length - 1] === 'function') {
+    return fs.writev(fd, buffers, ...args)
+  }
+
+  return new Promise((resolve, reject) => {
+    fs.writev(fd, buffers, ...args, (err, bytesWritten, buffers) => {
+      if (err) return reject(err)
+      resolve({ bytesWritten, buffers })
+    })
+  })
+}
+
+// fs.realpath.native sometimes not available if fs is monkey-patched
+if (typeof fs.realpath.native === 'function') {
+  exports.realpath.native = u(fs.realpath.native)
+} else {
+  process.emitWarning(
+    'fs.realpath.native is not a function. Is fs being monkey-patched?',
+    'Warning', 'fs-extra-WARN0003'
+  )
+}
+
+
+/***/ }),
+/* 6 */
+/***/ ((__unused_webpack_module, exports) => {
+
+"use strict";
+
+
+exports.fromCallback = function (fn) {
+  return Object.defineProperty(function (...args) {
+    if (typeof args[args.length - 1] === 'function') fn.apply(this, args)
+    else {
+      return new Promise((resolve, reject) => {
+        args.push((err, res) => (err != null) ? reject(err) : resolve(res))
+        fn.apply(this, args)
+      })
+    }
+  }, 'name', { value: fn.name })
+}
+
+exports.fromPromise = function (fn) {
+  return Object.defineProperty(function (...args) {
+    const cb = args[args.length - 1]
+    if (typeof cb !== 'function') return fn.apply(this, args)
+    else {
+      args.pop()
+      fn.apply(this, args).then(r => cb(null, r), cb)
+    }
+  }, 'name', { value: fn.name })
+}
+
+
+/***/ }),
+/* 7 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+var fs = __webpack_require__(8)
+var polyfills = __webpack_require__(9)
+var legacy = __webpack_require__(11)
+var clone = __webpack_require__(13)
+
+var util = __webpack_require__(14)
+
+/* istanbul ignore next - node 0.x polyfill */
+var gracefulQueue
+var previousSymbol
+
+/* istanbul ignore else - node 0.x polyfill */
+if (typeof Symbol === 'function' && typeof Symbol.for === 'function') {
+  gracefulQueue = Symbol.for('graceful-fs.queue')
+  // This is used in testing by future versions
+  previousSymbol = Symbol.for('graceful-fs.previous')
+} else {
+  gracefulQueue = '___graceful-fs.queue'
+  previousSymbol = '___graceful-fs.previous'
+}
+
+function noop () {}
+
+function publishQueue(context, queue) {
+  Object.defineProperty(context, gracefulQueue, {
+    get: function() {
+      return queue
+    }
+  })
+}
+
+var debug = noop
+if (util.debuglog)
+  debug = util.debuglog('gfs4')
+else if (/\bgfs4\b/i.test(process.env.NODE_DEBUG || ''))
+  debug = function() {
+    var m = util.format.apply(util, arguments)
+    m = 'GFS4: ' + m.split(/\n/).join('\nGFS4: ')
+    console.error(m)
+  }
+
+// Once time initialization
+if (!fs[gracefulQueue]) {
+  // This queue can be shared by multiple loaded instances
+  var queue = global[gracefulQueue] || []
+  publishQueue(fs, queue)
+
+  // Patch fs.close/closeSync to shared queue version, because we need
+  // to retry() whenever a close happens *anywhere* in the program.
+  // This is essential when multiple graceful-fs instances are
+  // in play at the same time.
+  fs.close = (function (fs$close) {
+    function close (fd, cb) {
+      return fs$close.call(fs, fd, function (err) {
+        // This function uses the graceful-fs shared queue
+        if (!err) {
+          resetQueue()
+        }
+
+        if (typeof cb === 'function')
+          cb.apply(this, arguments)
+      })
+    }
+
+    Object.defineProperty(close, previousSymbol, {
+      value: fs$close
+    })
+    return close
+  })(fs.close)
+
+  fs.closeSync = (function (fs$closeSync) {
+    function closeSync (fd) {
+      // This function uses the graceful-fs shared queue
+      fs$closeSync.apply(fs, arguments)
+      resetQueue()
+    }
+
+    Object.defineProperty(closeSync, previousSymbol, {
+      value: fs$closeSync
+    })
+    return closeSync
+  })(fs.closeSync)
+
+  if (/\bgfs4\b/i.test(process.env.NODE_DEBUG || '')) {
+    process.on('exit', function() {
+      debug(fs[gracefulQueue])
+      __webpack_require__(15).equal(fs[gracefulQueue].length, 0)
+    })
+  }
+}
+
+if (!global[gracefulQueue]) {
+  publishQueue(global, fs[gracefulQueue]);
+}
+
+module.exports = patch(clone(fs))
+if (process.env.TEST_GRACEFUL_FS_GLOBAL_PATCH && !fs.__patched) {
+    module.exports = patch(fs)
+    fs.__patched = true;
+}
+
+function patch (fs) {
+  // Everything that references the open() function needs to be in here
+  polyfills(fs)
+  fs.gracefulify = patch
+
+  fs.createReadStream = createReadStream
+  fs.createWriteStream = createWriteStream
+  var fs$readFile = fs.readFile
+  fs.readFile = readFile
+  function readFile (path, options, cb) {
+    if (typeof options === 'function')
+      cb = options, options = null
+
+    return go$readFile(path, options, cb)
+
+    function go$readFile (path, options, cb, startTime) {
+      return fs$readFile(path, options, function (err) {
+        if (err && (err.code === 'EMFILE' || err.code === 'ENFILE'))
+          enqueue([go$readFile, [path, options, cb], err, startTime || Date.now(), Date.now()])
+        else {
+          if (typeof cb === 'function')
+            cb.apply(this, arguments)
+        }
+      })
+    }
+  }
+
+  var fs$writeFile = fs.writeFile
+  fs.writeFile = writeFile
+  function writeFile (path, data, options, cb) {
+    if (typeof options === 'function')
+      cb = options, options = null
+
+    return go$writeFile(path, data, options, cb)
+
+    function go$writeFile (path, data, options, cb, startTime) {
+      return fs$writeFile(path, data, options, function (err) {
+        if (err && (err.code === 'EMFILE' || err.code === 'ENFILE'))
+          enqueue([go$writeFile, [path, data, options, cb], err, startTime || Date.now(), Date.now()])
+        else {
+          if (typeof cb === 'function')
+            cb.apply(this, arguments)
+        }
+      })
+    }
+  }
+
+  var fs$appendFile = fs.appendFile
+  if (fs$appendFile)
+    fs.appendFile = appendFile
+  function appendFile (path, data, options, cb) {
+    if (typeof options === 'function')
+      cb = options, options = null
+
+    return go$appendFile(path, data, options, cb)
+
+    function go$appendFile (path, data, options, cb, startTime) {
+      return fs$appendFile(path, data, options, function (err) {
+        if (err && (err.code === 'EMFILE' || err.code === 'ENFILE'))
+          enqueue([go$appendFile, [path, data, options, cb], err, startTime || Date.now(), Date.now()])
+        else {
+          if (typeof cb === 'function')
+            cb.apply(this, arguments)
+        }
+      })
+    }
+  }
+
+  var fs$copyFile = fs.copyFile
+  if (fs$copyFile)
+    fs.copyFile = copyFile
+  function copyFile (src, dest, flags, cb) {
+    if (typeof flags === 'function') {
+      cb = flags
+      flags = 0
+    }
+    return go$copyFile(src, dest, flags, cb)
+
+    function go$copyFile (src, dest, flags, cb, startTime) {
+      return fs$copyFile(src, dest, flags, function (err) {
+        if (err && (err.code === 'EMFILE' || err.code === 'ENFILE'))
+          enqueue([go$copyFile, [src, dest, flags, cb], err, startTime || Date.now(), Date.now()])
+        else {
+          if (typeof cb === 'function')
+            cb.apply(this, arguments)
+        }
+      })
+    }
+  }
+
+  var fs$readdir = fs.readdir
+  fs.readdir = readdir
+  var noReaddirOptionVersions = /^v[0-5]\./
+  function readdir (path, options, cb) {
+    if (typeof options === 'function')
+      cb = options, options = null
+
+    var go$readdir = noReaddirOptionVersions.test(process.version)
+      ? function go$readdir (path, options, cb, startTime) {
+        return fs$readdir(path, fs$readdirCallback(
+          path, options, cb, startTime
+        ))
+      }
+      : function go$readdir (path, options, cb, startTime) {
+        return fs$readdir(path, options, fs$readdirCallback(
+          path, options, cb, startTime
+        ))
+      }
+
+    return go$readdir(path, options, cb)
+
+    function fs$readdirCallback (path, options, cb, startTime) {
+      return function (err, files) {
+        if (err && (err.code === 'EMFILE' || err.code === 'ENFILE'))
+          enqueue([
+            go$readdir,
+            [path, options, cb],
+            err,
+            startTime || Date.now(),
+            Date.now()
+          ])
+        else {
+          if (files && files.sort)
+            files.sort()
+
+          if (typeof cb === 'function')
+            cb.call(this, err, files)
+        }
+      }
+    }
+  }
+
+  if (process.version.substr(0, 4) === 'v0.8') {
+    var legStreams = legacy(fs)
+    ReadStream = legStreams.ReadStream
+    WriteStream = legStreams.WriteStream
+  }
+
+  var fs$ReadStream = fs.ReadStream
+  if (fs$ReadStream) {
+    ReadStream.prototype = Object.create(fs$ReadStream.prototype)
+    ReadStream.prototype.open = ReadStream$open
+  }
+
+  var fs$WriteStream = fs.WriteStream
+  if (fs$WriteStream) {
+    WriteStream.prototype = Object.create(fs$WriteStream.prototype)
+    WriteStream.prototype.open = WriteStream$open
+  }
+
+  Object.defineProperty(fs, 'ReadStream', {
+    get: function () {
+      return ReadStream
+    },
+    set: function (val) {
+      ReadStream = val
+    },
+    enumerable: true,
+    configurable: true
+  })
+  Object.defineProperty(fs, 'WriteStream', {
+    get: function () {
+      return WriteStream
+    },
+    set: function (val) {
+      WriteStream = val
+    },
+    enumerable: true,
+    configurable: true
+  })
+
+  // legacy names
+  var FileReadStream = ReadStream
+  Object.defineProperty(fs, 'FileReadStream', {
+    get: function () {
+      return FileReadStream
+    },
+    set: function (val) {
+      FileReadStream = val
+    },
+    enumerable: true,
+    configurable: true
+  })
+  var FileWriteStream = WriteStream
+  Object.defineProperty(fs, 'FileWriteStream', {
+    get: function () {
+      return FileWriteStream
+    },
+    set: function (val) {
+      FileWriteStream = val
+    },
+    enumerable: true,
+    configurable: true
+  })
+
+  function ReadStream (path, options) {
+    if (this instanceof ReadStream)
+      return fs$ReadStream.apply(this, arguments), this
+    else
+      return ReadStream.apply(Object.create(ReadStream.prototype), arguments)
+  }
+
+  function ReadStream$open () {
+    var that = this
+    open(that.path, that.flags, that.mode, function (err, fd) {
+      if (err) {
+        if (that.autoClose)
+          that.destroy()
+
+        that.emit('error', err)
+      } else {
+        that.fd = fd
+        that.emit('open', fd)
+        that.read()
+      }
+    })
+  }
+
+  function WriteStream (path, options) {
+    if (this instanceof WriteStream)
+      return fs$WriteStream.apply(this, arguments), this
+    else
+      return WriteStream.apply(Object.create(WriteStream.prototype), arguments)
+  }
+
+  function WriteStream$open () {
+    var that = this
+    open(that.path, that.flags, that.mode, function (err, fd) {
+      if (err) {
+        that.destroy()
+        that.emit('error', err)
+      } else {
+        that.fd = fd
+        that.emit('open', fd)
+      }
+    })
+  }
+
+  function createReadStream (path, options) {
+    return new fs.ReadStream(path, options)
+  }
+
+  function createWriteStream (path, options) {
+    return new fs.WriteStream(path, options)
+  }
+
+  var fs$open = fs.open
+  fs.open = open
+  function open (path, flags, mode, cb) {
+    if (typeof mode === 'function')
+      cb = mode, mode = null
+
+    return go$open(path, flags, mode, cb)
+
+    function go$open (path, flags, mode, cb, startTime) {
+      return fs$open(path, flags, mode, function (err, fd) {
+        if (err && (err.code === 'EMFILE' || err.code === 'ENFILE'))
+          enqueue([go$open, [path, flags, mode, cb], err, startTime || Date.now(), Date.now()])
+        else {
+          if (typeof cb === 'function')
+            cb.apply(this, arguments)
+        }
+      })
+    }
+  }
+
+  return fs
+}
+
+function enqueue (elem) {
+  debug('ENQUEUE', elem[0].name, elem[1])
+  fs[gracefulQueue].push(elem)
+  retry()
+}
+
+// keep track of the timeout between retry() calls
+var retryTimer
+
+// reset the startTime and lastTime to now
+// this resets the start of the 60 second overall timeout as well as the
+// delay between attempts so that we'll retry these jobs sooner
+function resetQueue () {
+  var now = Date.now()
+  for (var i = 0; i < fs[gracefulQueue].length; ++i) {
+    // entries that are only a length of 2 are from an older version, don't
+    // bother modifying those since they'll be retried anyway.
+    if (fs[gracefulQueue][i].length > 2) {
+      fs[gracefulQueue][i][3] = now // startTime
+      fs[gracefulQueue][i][4] = now // lastTime
+    }
+  }
+  // call retry to make sure we're actively processing the queue
+  retry()
+}
+
+function retry () {
+  // clear the timer and remove it to help prevent unintended concurrency
+  clearTimeout(retryTimer)
+  retryTimer = undefined
+
+  if (fs[gracefulQueue].length === 0)
+    return
+
+  var elem = fs[gracefulQueue].shift()
+  var fn = elem[0]
+  var args = elem[1]
+  // these items may be unset if they were added by an older graceful-fs
+  var err = elem[2]
+  var startTime = elem[3]
+  var lastTime = elem[4]
+
+  // if we don't have a startTime we have no way of knowing if we've waited
+  // long enough, so go ahead and retry this item now
+  if (startTime === undefined) {
+    debug('RETRY', fn.name, args)
+    fn.apply(null, args)
+  } else if (Date.now() - startTime >= 60000) {
+    // it's been more than 60 seconds total, bail now
+    debug('TIMEOUT', fn.name, args)
+    var cb = args.pop()
+    if (typeof cb === 'function')
+      cb.call(null, err)
+  } else {
+    // the amount of time between the last attempt and right now
+    var sinceAttempt = Date.now() - lastTime
+    // the amount of time between when we first tried, and when we last tried
+    // rounded up to at least 1
+    var sinceStart = Math.max(lastTime - startTime, 1)
+    // backoff. wait longer than the total time we've been retrying, but only
+    // up to a maximum of 100ms
+    var desiredDelay = Math.min(sinceStart * 1.2, 100)
+    // it's been long enough since the last retry, do it again
+    if (sinceAttempt >= desiredDelay) {
+      debug('RETRY', fn.name, args)
+      fn.apply(null, args.concat([startTime]))
+    } else {
+      // if we can't do this job yet, push it to the end of the queue
+      // and let the next iteration check again
+      fs[gracefulQueue].push(elem)
+    }
+  }
+
+  // schedule our next run if one isn't already scheduled
+  if (retryTimer === undefined) {
+    retryTimer = setTimeout(retry, 0)
+  }
+}
+
+
+/***/ }),
+/* 8 */
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("fs");
+
+/***/ }),
+/* 9 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+var constants = __webpack_require__(10)
+
+var origCwd = process.cwd
+var cwd = null
+
+var platform = process.env.GRACEFUL_FS_PLATFORM || process.platform
+
+process.cwd = function() {
+  if (!cwd)
+    cwd = origCwd.call(process)
+  return cwd
+}
+try {
+  process.cwd()
+} catch (er) {}
+
+// This check is needed until node.js 12 is required
+if (typeof process.chdir === 'function') {
+  var chdir = process.chdir
+  process.chdir = function (d) {
+    cwd = null
+    chdir.call(process, d)
+  }
+  if (Object.setPrototypeOf) Object.setPrototypeOf(process.chdir, chdir)
+}
+
+module.exports = patch
+
+function patch (fs) {
+  // (re-)implement some things that are known busted or missing.
+
+  // lchmod, broken prior to 0.6.2
+  // back-port the fix here.
+  if (constants.hasOwnProperty('O_SYMLINK') &&
+      process.version.match(/^v0\.6\.[0-2]|^v0\.5\./)) {
+    patchLchmod(fs)
+  }
+
+  // lutimes implementation, or no-op
+  if (!fs.lutimes) {
+    patchLutimes(fs)
+  }
+
+  // https://github.com/isaacs/node-graceful-fs/issues/4
+  // Chown should not fail on einval or eperm if non-root.
+  // It should not fail on enosys ever, as this just indicates
+  // that a fs doesn't support the intended operation.
+
+  fs.chown = chownFix(fs.chown)
+  fs.fchown = chownFix(fs.fchown)
+  fs.lchown = chownFix(fs.lchown)
+
+  fs.chmod = chmodFix(fs.chmod)
+  fs.fchmod = chmodFix(fs.fchmod)
+  fs.lchmod = chmodFix(fs.lchmod)
+
+  fs.chownSync = chownFixSync(fs.chownSync)
+  fs.fchownSync = chownFixSync(fs.fchownSync)
+  fs.lchownSync = chownFixSync(fs.lchownSync)
+
+  fs.chmodSync = chmodFixSync(fs.chmodSync)
+  fs.fchmodSync = chmodFixSync(fs.fchmodSync)
+  fs.lchmodSync = chmodFixSync(fs.lchmodSync)
+
+  fs.stat = statFix(fs.stat)
+  fs.fstat = statFix(fs.fstat)
+  fs.lstat = statFix(fs.lstat)
+
+  fs.statSync = statFixSync(fs.statSync)
+  fs.fstatSync = statFixSync(fs.fstatSync)
+  fs.lstatSync = statFixSync(fs.lstatSync)
+
+  // if lchmod/lchown do not exist, then make them no-ops
+  if (fs.chmod && !fs.lchmod) {
+    fs.lchmod = function (path, mode, cb) {
+      if (cb) process.nextTick(cb)
+    }
+    fs.lchmodSync = function () {}
+  }
+  if (fs.chown && !fs.lchown) {
+    fs.lchown = function (path, uid, gid, cb) {
+      if (cb) process.nextTick(cb)
+    }
+    fs.lchownSync = function () {}
+  }
+
+  // on Windows, A/V software can lock the directory, causing this
+  // to fail with an EACCES or EPERM if the directory contains newly
+  // created files.  Try again on failure, for up to 60 seconds.
+
+  // Set the timeout this long because some Windows Anti-Virus, such as Parity
+  // bit9, may lock files for up to a minute, causing npm package install
+  // failures. Also, take care to yield the scheduler. Windows scheduling gives
+  // CPU to a busy looping process, which can cause the program causing the lock
+  // contention to be starved of CPU by node, so the contention doesn't resolve.
+  if (platform === "win32") {
+    fs.rename = typeof fs.rename !== 'function' ? fs.rename
+    : (function (fs$rename) {
+      function rename (from, to, cb) {
+        var start = Date.now()
+        var backoff = 0;
+        fs$rename(from, to, function CB (er) {
+          if (er
+              && (er.code === "EACCES" || er.code === "EPERM" || er.code === "EBUSY")
+              && Date.now() - start < 60000) {
+            setTimeout(function() {
+              fs.stat(to, function (stater, st) {
+                if (stater && stater.code === "ENOENT")
+                  fs$rename(from, to, CB);
+                else
+                  cb(er)
+              })
+            }, backoff)
+            if (backoff < 100)
+              backoff += 10;
+            return;
+          }
+          if (cb) cb(er)
+        })
+      }
+      if (Object.setPrototypeOf) Object.setPrototypeOf(rename, fs$rename)
+      return rename
+    })(fs.rename)
+  }
+
+  // if read() returns EAGAIN, then just try it again.
+  fs.read = typeof fs.read !== 'function' ? fs.read
+  : (function (fs$read) {
+    function read (fd, buffer, offset, length, position, callback_) {
+      var callback
+      if (callback_ && typeof callback_ === 'function') {
+        var eagCounter = 0
+        callback = function (er, _, __) {
+          if (er && er.code === 'EAGAIN' && eagCounter < 10) {
+            eagCounter ++
+            return fs$read.call(fs, fd, buffer, offset, length, position, callback)
+          }
+          callback_.apply(this, arguments)
+        }
+      }
+      return fs$read.call(fs, fd, buffer, offset, length, position, callback)
+    }
+
+    // This ensures `util.promisify` works as it does for native `fs.read`.
+    if (Object.setPrototypeOf) Object.setPrototypeOf(read, fs$read)
+    return read
+  })(fs.read)
+
+  fs.readSync = typeof fs.readSync !== 'function' ? fs.readSync
+  : (function (fs$readSync) { return function (fd, buffer, offset, length, position) {
+    var eagCounter = 0
+    while (true) {
+      try {
+        return fs$readSync.call(fs, fd, buffer, offset, length, position)
+      } catch (er) {
+        if (er.code === 'EAGAIN' && eagCounter < 10) {
+          eagCounter ++
+          continue
+        }
+        throw er
+      }
+    }
+  }})(fs.readSync)
+
+  function patchLchmod (fs) {
+    fs.lchmod = function (path, mode, callback) {
+      fs.open( path
+             , constants.O_WRONLY | constants.O_SYMLINK
+             , mode
+             , function (err, fd) {
+        if (err) {
+          if (callback) callback(err)
+          return
+        }
+        // prefer to return the chmod error, if one occurs,
+        // but still try to close, and report closing errors if they occur.
+        fs.fchmod(fd, mode, function (err) {
+          fs.close(fd, function(err2) {
+            if (callback) callback(err || err2)
+          })
+        })
+      })
+    }
+
+    fs.lchmodSync = function (path, mode) {
+      var fd = fs.openSync(path, constants.O_WRONLY | constants.O_SYMLINK, mode)
+
+      // prefer to return the chmod error, if one occurs,
+      // but still try to close, and report closing errors if they occur.
+      var threw = true
+      var ret
+      try {
+        ret = fs.fchmodSync(fd, mode)
+        threw = false
+      } finally {
+        if (threw) {
+          try {
+            fs.closeSync(fd)
+          } catch (er) {}
+        } else {
+          fs.closeSync(fd)
+        }
+      }
+      return ret
+    }
+  }
+
+  function patchLutimes (fs) {
+    if (constants.hasOwnProperty("O_SYMLINK") && fs.futimes) {
+      fs.lutimes = function (path, at, mt, cb) {
+        fs.open(path, constants.O_SYMLINK, function (er, fd) {
+          if (er) {
+            if (cb) cb(er)
+            return
+          }
+          fs.futimes(fd, at, mt, function (er) {
+            fs.close(fd, function (er2) {
+              if (cb) cb(er || er2)
+            })
+          })
+        })
+      }
+
+      fs.lutimesSync = function (path, at, mt) {
+        var fd = fs.openSync(path, constants.O_SYMLINK)
+        var ret
+        var threw = true
+        try {
+          ret = fs.futimesSync(fd, at, mt)
+          threw = false
+        } finally {
+          if (threw) {
+            try {
+              fs.closeSync(fd)
+            } catch (er) {}
+          } else {
+            fs.closeSync(fd)
+          }
+        }
+        return ret
+      }
+
+    } else if (fs.futimes) {
+      fs.lutimes = function (_a, _b, _c, cb) { if (cb) process.nextTick(cb) }
+      fs.lutimesSync = function () {}
+    }
+  }
+
+  function chmodFix (orig) {
+    if (!orig) return orig
+    return function (target, mode, cb) {
+      return orig.call(fs, target, mode, function (er) {
+        if (chownErOk(er)) er = null
+        if (cb) cb.apply(this, arguments)
+      })
+    }
+  }
+
+  function chmodFixSync (orig) {
+    if (!orig) return orig
+    return function (target, mode) {
+      try {
+        return orig.call(fs, target, mode)
+      } catch (er) {
+        if (!chownErOk(er)) throw er
+      }
+    }
+  }
+
+
+  function chownFix (orig) {
+    if (!orig) return orig
+    return function (target, uid, gid, cb) {
+      return orig.call(fs, target, uid, gid, function (er) {
+        if (chownErOk(er)) er = null
+        if (cb) cb.apply(this, arguments)
+      })
+    }
+  }
+
+  function chownFixSync (orig) {
+    if (!orig) return orig
+    return function (target, uid, gid) {
+      try {
+        return orig.call(fs, target, uid, gid)
+      } catch (er) {
+        if (!chownErOk(er)) throw er
+      }
+    }
+  }
+
+  function statFix (orig) {
+    if (!orig) return orig
+    // Older versions of Node erroneously returned signed integers for
+    // uid + gid.
+    return function (target, options, cb) {
+      if (typeof options === 'function') {
+        cb = options
+        options = null
+      }
+      function callback (er, stats) {
+        if (stats) {
+          if (stats.uid < 0) stats.uid += 0x100000000
+          if (stats.gid < 0) stats.gid += 0x100000000
+        }
+        if (cb) cb.apply(this, arguments)
+      }
+      return options ? orig.call(fs, target, options, callback)
+        : orig.call(fs, target, callback)
+    }
+  }
+
+  function statFixSync (orig) {
+    if (!orig) return orig
+    // Older versions of Node erroneously returned signed integers for
+    // uid + gid.
+    return function (target, options) {
+      var stats = options ? orig.call(fs, target, options)
+        : orig.call(fs, target)
+      if (stats) {
+        if (stats.uid < 0) stats.uid += 0x100000000
+        if (stats.gid < 0) stats.gid += 0x100000000
+      }
+      return stats;
+    }
+  }
+
+  // ENOSYS means that the fs doesn't support the op. Just ignore
+  // that, because it doesn't matter.
+  //
+  // if there's no getuid, or if getuid() is something other
+  // than 0, and the error is EINVAL or EPERM, then just ignore
+  // it.
+  //
+  // This specific case is a silent failure in cp, install, tar,
+  // and most other unix tools that manage permissions.
+  //
+  // When running as root, or if other types of errors are
+  // encountered, then it's strict.
+  function chownErOk (er) {
+    if (!er)
+      return true
+
+    if (er.code === "ENOSYS")
+      return true
+
+    var nonroot = !process.getuid || process.getuid() !== 0
+    if (nonroot) {
+      if (er.code === "EINVAL" || er.code === "EPERM")
+        return true
+    }
+
+    return false
+  }
+}
+
+
+/***/ }),
+/* 10 */
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("constants");
+
+/***/ }),
+/* 11 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+var Stream = (__webpack_require__(12).Stream)
+
+module.exports = legacy
+
+function legacy (fs) {
+  return {
+    ReadStream: ReadStream,
+    WriteStream: WriteStream
+  }
+
+  function ReadStream (path, options) {
+    if (!(this instanceof ReadStream)) return new ReadStream(path, options);
+
+    Stream.call(this);
+
+    var self = this;
+
+    this.path = path;
+    this.fd = null;
+    this.readable = true;
+    this.paused = false;
+
+    this.flags = 'r';
+    this.mode = 438; /*=0666*/
+    this.bufferSize = 64 * 1024;
+
+    options = options || {};
+
+    // Mixin options into this
+    var keys = Object.keys(options);
+    for (var index = 0, length = keys.length; index < length; index++) {
+      var key = keys[index];
+      this[key] = options[key];
+    }
+
+    if (this.encoding) this.setEncoding(this.encoding);
+
+    if (this.start !== undefined) {
+      if ('number' !== typeof this.start) {
+        throw TypeError('start must be a Number');
+      }
+      if (this.end === undefined) {
+        this.end = Infinity;
+      } else if ('number' !== typeof this.end) {
+        throw TypeError('end must be a Number');
+      }
+
+      if (this.start > this.end) {
+        throw new Error('start must be <= end');
+      }
+
+      this.pos = this.start;
+    }
+
+    if (this.fd !== null) {
+      process.nextTick(function() {
+        self._read();
+      });
+      return;
+    }
+
+    fs.open(this.path, this.flags, this.mode, function (err, fd) {
+      if (err) {
+        self.emit('error', err);
+        self.readable = false;
+        return;
+      }
+
+      self.fd = fd;
+      self.emit('open', fd);
+      self._read();
+    })
+  }
+
+  function WriteStream (path, options) {
+    if (!(this instanceof WriteStream)) return new WriteStream(path, options);
+
+    Stream.call(this);
+
+    this.path = path;
+    this.fd = null;
+    this.writable = true;
+
+    this.flags = 'w';
+    this.encoding = 'binary';
+    this.mode = 438; /*=0666*/
+    this.bytesWritten = 0;
+
+    options = options || {};
+
+    // Mixin options into this
+    var keys = Object.keys(options);
+    for (var index = 0, length = keys.length; index < length; index++) {
+      var key = keys[index];
+      this[key] = options[key];
+    }
+
+    if (this.start !== undefined) {
+      if ('number' !== typeof this.start) {
+        throw TypeError('start must be a Number');
+      }
+      if (this.start < 0) {
+        throw new Error('start must be >= zero');
+      }
+
+      this.pos = this.start;
+    }
+
+    this.busy = false;
+    this._queue = [];
+
+    if (this.fd === null) {
+      this._open = fs.open;
+      this._queue.push([this._open, this.path, this.flags, this.mode, undefined]);
+      this.flush();
+    }
+  }
+}
+
+
+/***/ }),
+/* 12 */
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("stream");
+
+/***/ }),
+/* 13 */
+/***/ ((module) => {
+
+"use strict";
+
+
+module.exports = clone
+
+var getPrototypeOf = Object.getPrototypeOf || function (obj) {
+  return obj.__proto__
+}
+
+function clone (obj) {
+  if (obj === null || typeof obj !== 'object')
+    return obj
+
+  if (obj instanceof Object)
+    var copy = { __proto__: getPrototypeOf(obj) }
+  else
+    var copy = Object.create(null)
+
+  Object.getOwnPropertyNames(obj).forEach(function (key) {
+    Object.defineProperty(copy, key, Object.getOwnPropertyDescriptor(obj, key))
+  })
+
+  return copy
+}
+
+
+/***/ }),
+/* 14 */
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("util");
+
+/***/ }),
+/* 15 */
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("assert");
+
+/***/ }),
+/* 16 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const u = (__webpack_require__(6).fromPromise)
+module.exports = {
+  copy: u(__webpack_require__(17)),
+  copySync: __webpack_require__(24)
+}
+
+
+/***/ }),
+/* 17 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const fs = __webpack_require__(5)
+const path = __webpack_require__(3)
+const { mkdirs } = __webpack_require__(18)
+const { pathExists } = __webpack_require__(21)
+const { utimesMillis } = __webpack_require__(22)
+const stat = __webpack_require__(23)
+
+async function copy (src, dest, opts = {}) {
+  if (typeof opts === 'function') {
+    opts = { filter: opts }
+  }
+
+  opts.clobber = 'clobber' in opts ? !!opts.clobber : true // default to true for now
+  opts.overwrite = 'overwrite' in opts ? !!opts.overwrite : opts.clobber // overwrite falls back to clobber
+
+  // Warn about using preserveTimestamps on 32-bit node
+  if (opts.preserveTimestamps && process.arch === 'ia32') {
+    process.emitWarning(
+      'Using the preserveTimestamps option in 32-bit node is not recommended;\n\n' +
+      '\tsee https://github.com/jprichardson/node-fs-extra/issues/269',
+      'Warning', 'fs-extra-WARN0001'
+    )
+  }
+
+  const { srcStat, destStat } = await stat.checkPaths(src, dest, 'copy', opts)
+
+  await stat.checkParentPaths(src, srcStat, dest, 'copy')
+
+  const include = await runFilter(src, dest, opts)
+
+  if (!include) return
+
+  // check if the parent of dest exists, and create it if it doesn't exist
+  const destParent = path.dirname(dest)
+  const dirExists = await pathExists(destParent)
+  if (!dirExists) {
+    await mkdirs(destParent)
+  }
+
+  await getStatsAndPerformCopy(destStat, src, dest, opts)
+}
+
+async function runFilter (src, dest, opts) {
+  if (!opts.filter) return true
+  return opts.filter(src, dest)
+}
+
+async function getStatsAndPerformCopy (destStat, src, dest, opts) {
+  const statFn = opts.dereference ? fs.stat : fs.lstat
+  const srcStat = await statFn(src)
+
+  if (srcStat.isDirectory()) return onDir(srcStat, destStat, src, dest, opts)
+
+  if (
+    srcStat.isFile() ||
+    srcStat.isCharacterDevice() ||
+    srcStat.isBlockDevice()
+  ) return onFile(srcStat, destStat, src, dest, opts)
+
+  if (srcStat.isSymbolicLink()) return onLink(destStat, src, dest, opts)
+  if (srcStat.isSocket()) throw new Error(`Cannot copy a socket file: ${src}`)
+  if (srcStat.isFIFO()) throw new Error(`Cannot copy a FIFO pipe: ${src}`)
+  throw new Error(`Unknown file: ${src}`)
+}
+
+async function onFile (srcStat, destStat, src, dest, opts) {
+  if (!destStat) return copyFile(srcStat, src, dest, opts)
+
+  if (opts.overwrite) {
+    await fs.unlink(dest)
+    return copyFile(srcStat, src, dest, opts)
+  }
+  if (opts.errorOnExist) {
+    throw new Error(`'${dest}' already exists`)
+  }
+}
+
+async function copyFile (srcStat, src, dest, opts) {
+  await fs.copyFile(src, dest)
+  if (opts.preserveTimestamps) {
+    // Make sure the file is writable before setting the timestamp
+    // otherwise open fails with EPERM when invoked with 'r+'
+    // (through utimes call)
+    if (fileIsNotWritable(srcStat.mode)) {
+      await makeFileWritable(dest, srcStat.mode)
+    }
+
+    // Set timestamps and mode correspondingly
+
+    // Note that The initial srcStat.atime cannot be trusted
+    // because it is modified by the read(2) system call
+    // (See https://nodejs.org/api/fs.html#fs_stat_time_values)
+    const updatedSrcStat = await fs.stat(src)
+    await utimesMillis(dest, updatedSrcStat.atime, updatedSrcStat.mtime)
+  }
+
+  return fs.chmod(dest, srcStat.mode)
+}
+
+function fileIsNotWritable (srcMode) {
+  return (srcMode & 0o200) === 0
+}
+
+function makeFileWritable (dest, srcMode) {
+  return fs.chmod(dest, srcMode | 0o200)
+}
+
+async function onDir (srcStat, destStat, src, dest, opts) {
+  // the dest directory might not exist, create it
+  if (!destStat) {
+    await fs.mkdir(dest)
+  }
+
+  const items = await fs.readdir(src)
+
+  // loop through the files in the current directory to copy everything
+  await Promise.all(items.map(async item => {
+    const srcItem = path.join(src, item)
+    const destItem = path.join(dest, item)
+
+    // skip the item if it is matches by the filter function
+    const include = await runFilter(srcItem, destItem, opts)
+    if (!include) return
+
+    const { destStat } = await stat.checkPaths(srcItem, destItem, 'copy', opts)
+
+    // If the item is a copyable file, `getStatsAndPerformCopy` will copy it
+    // If the item is a directory, `getStatsAndPerformCopy` will call `onDir` recursively
+    return getStatsAndPerformCopy(destStat, srcItem, destItem, opts)
+  }))
+
+  if (!destStat) {
+    await fs.chmod(dest, srcStat.mode)
+  }
+}
+
+async function onLink (destStat, src, dest, opts) {
+  let resolvedSrc = await fs.readlink(src)
+  if (opts.dereference) {
+    resolvedSrc = path.resolve(process.cwd(), resolvedSrc)
+  }
+  if (!destStat) {
+    return fs.symlink(resolvedSrc, dest)
+  }
+
+  let resolvedDest = null
+  try {
+    resolvedDest = await fs.readlink(dest)
+  } catch (e) {
+    // dest exists and is a regular file or directory,
+    // Windows may throw UNKNOWN error. If dest already exists,
+    // fs throws error anyway, so no need to guard against it here.
+    if (e.code === 'EINVAL' || e.code === 'UNKNOWN') return fs.symlink(resolvedSrc, dest)
+    throw e
+  }
+  if (opts.dereference) {
+    resolvedDest = path.resolve(process.cwd(), resolvedDest)
+  }
+  if (stat.isSrcSubdir(resolvedSrc, resolvedDest)) {
+    throw new Error(`Cannot copy '${resolvedSrc}' to a subdirectory of itself, '${resolvedDest}'.`)
+  }
+
+  // do not copy if src is a subdir of dest since unlinking
+  // dest in this case would result in removing src contents
+  // and therefore a broken symlink would be created.
+  if (stat.isSrcSubdir(resolvedDest, resolvedSrc)) {
+    throw new Error(`Cannot overwrite '${resolvedDest}' with '${resolvedSrc}'.`)
+  }
+
+  // copy the link
+  await fs.unlink(dest)
+  return fs.symlink(resolvedSrc, dest)
+}
+
+module.exports = copy
+
+
+/***/ }),
+/* 18 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+const u = (__webpack_require__(6).fromPromise)
+const { makeDir: _makeDir, makeDirSync } = __webpack_require__(19)
+const makeDir = u(_makeDir)
+
+module.exports = {
+  mkdirs: makeDir,
+  mkdirsSync: makeDirSync,
+  // alias
+  mkdirp: makeDir,
+  mkdirpSync: makeDirSync,
+  ensureDir: makeDir,
+  ensureDirSync: makeDirSync
+}
+
+
+/***/ }),
+/* 19 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+const fs = __webpack_require__(5)
+const { checkPath } = __webpack_require__(20)
+
+const getMode = options => {
+  const defaults = { mode: 0o777 }
+  if (typeof options === 'number') return options
+  return ({ ...defaults, ...options }).mode
+}
+
+module.exports.makeDir = async (dir, options) => {
+  checkPath(dir)
+
+  return fs.mkdir(dir, {
+    mode: getMode(options),
+    recursive: true
+  })
+}
+
+module.exports.makeDirSync = (dir, options) => {
+  checkPath(dir)
+
+  return fs.mkdirSync(dir, {
+    mode: getMode(options),
+    recursive: true
+  })
+}
+
+
+/***/ }),
+/* 20 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+// Adapted from https://github.com/sindresorhus/make-dir
+// Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
+// Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+// The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+const path = __webpack_require__(3)
+
+// https://github.com/nodejs/node/issues/8987
+// https://github.com/libuv/libuv/pull/1088
+module.exports.checkPath = function checkPath (pth) {
+  if (process.platform === 'win32') {
+    const pathHasInvalidWinCharacters = /[<>:"|?*]/.test(pth.replace(path.parse(pth).root, ''))
+
+    if (pathHasInvalidWinCharacters) {
+      const error = new Error(`Path contains invalid characters: ${pth}`)
+      error.code = 'EINVAL'
+      throw error
+    }
+  }
+}
+
+
+/***/ }),
+/* 21 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+const u = (__webpack_require__(6).fromPromise)
+const fs = __webpack_require__(5)
+
+function pathExists (path) {
+  return fs.access(path).then(() => true).catch(() => false)
+}
+
+module.exports = {
+  pathExists: u(pathExists),
+  pathExistsSync: fs.existsSync
+}
+
+
+/***/ }),
+/* 22 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const fs = __webpack_require__(5)
+const u = (__webpack_require__(6).fromPromise)
+
+async function utimesMillis (path, atime, mtime) {
+  // if (!HAS_MILLIS_RES) return fs.utimes(path, atime, mtime, callback)
+  const fd = await fs.open(path, 'r+')
+
+  let closeErr = null
+
+  try {
+    await fs.futimes(fd, atime, mtime)
+  } finally {
+    try {
+      await fs.close(fd)
+    } catch (e) {
+      closeErr = e
+    }
+  }
+
+  if (closeErr) {
+    throw closeErr
+  }
+}
+
+function utimesMillisSync (path, atime, mtime) {
+  const fd = fs.openSync(path, 'r+')
+  fs.futimesSync(fd, atime, mtime)
+  return fs.closeSync(fd)
+}
+
+module.exports = {
+  utimesMillis: u(utimesMillis),
+  utimesMillisSync
+}
+
+
+/***/ }),
+/* 23 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const fs = __webpack_require__(5)
+const path = __webpack_require__(3)
+const u = (__webpack_require__(6).fromPromise)
+
+function getStats (src, dest, opts) {
+  const statFunc = opts.dereference
+    ? (file) => fs.stat(file, { bigint: true })
+    : (file) => fs.lstat(file, { bigint: true })
+  return Promise.all([
+    statFunc(src),
+    statFunc(dest).catch(err => {
+      if (err.code === 'ENOENT') return null
+      throw err
+    })
+  ]).then(([srcStat, destStat]) => ({ srcStat, destStat }))
+}
+
+function getStatsSync (src, dest, opts) {
+  let destStat
+  const statFunc = opts.dereference
+    ? (file) => fs.statSync(file, { bigint: true })
+    : (file) => fs.lstatSync(file, { bigint: true })
+  const srcStat = statFunc(src)
+  try {
+    destStat = statFunc(dest)
+  } catch (err) {
+    if (err.code === 'ENOENT') return { srcStat, destStat: null }
+    throw err
+  }
+  return { srcStat, destStat }
+}
+
+async function checkPaths (src, dest, funcName, opts) {
+  const { srcStat, destStat } = await getStats(src, dest, opts)
+  if (destStat) {
+    if (areIdentical(srcStat, destStat)) {
+      const srcBaseName = path.basename(src)
+      const destBaseName = path.basename(dest)
+      if (funcName === 'move' &&
+        srcBaseName !== destBaseName &&
+        srcBaseName.toLowerCase() === destBaseName.toLowerCase()) {
+        return { srcStat, destStat, isChangingCase: true }
+      }
+      throw new Error('Source and destination must not be the same.')
+    }
+    if (srcStat.isDirectory() && !destStat.isDirectory()) {
+      throw new Error(`Cannot overwrite non-directory '${dest}' with directory '${src}'.`)
+    }
+    if (!srcStat.isDirectory() && destStat.isDirectory()) {
+      throw new Error(`Cannot overwrite directory '${dest}' with non-directory '${src}'.`)
+    }
+  }
+
+  if (srcStat.isDirectory() && isSrcSubdir(src, dest)) {
+    throw new Error(errMsg(src, dest, funcName))
+  }
+
+  return { srcStat, destStat }
+}
+
+function checkPathsSync (src, dest, funcName, opts) {
+  const { srcStat, destStat } = getStatsSync(src, dest, opts)
+
+  if (destStat) {
+    if (areIdentical(srcStat, destStat)) {
+      const srcBaseName = path.basename(src)
+      const destBaseName = path.basename(dest)
+      if (funcName === 'move' &&
+        srcBaseName !== destBaseName &&
+        srcBaseName.toLowerCase() === destBaseName.toLowerCase()) {
+        return { srcStat, destStat, isChangingCase: true }
+      }
+      throw new Error('Source and destination must not be the same.')
+    }
+    if (srcStat.isDirectory() && !destStat.isDirectory()) {
+      throw new Error(`Cannot overwrite non-directory '${dest}' with directory '${src}'.`)
+    }
+    if (!srcStat.isDirectory() && destStat.isDirectory()) {
+      throw new Error(`Cannot overwrite directory '${dest}' with non-directory '${src}'.`)
+    }
+  }
+
+  if (srcStat.isDirectory() && isSrcSubdir(src, dest)) {
+    throw new Error(errMsg(src, dest, funcName))
+  }
+  return { srcStat, destStat }
+}
+
+// recursively check if dest parent is a subdirectory of src.
+// It works for all file types including symlinks since it
+// checks the src and dest inodes. It starts from the deepest
+// parent and stops once it reaches the src parent or the root path.
+async function checkParentPaths (src, srcStat, dest, funcName) {
+  const srcParent = path.resolve(path.dirname(src))
+  const destParent = path.resolve(path.dirname(dest))
+  if (destParent === srcParent || destParent === path.parse(destParent).root) return
+
+  let destStat
+  try {
+    destStat = await fs.stat(destParent, { bigint: true })
+  } catch (err) {
+    if (err.code === 'ENOENT') return
+    throw err
+  }
+
+  if (areIdentical(srcStat, destStat)) {
+    throw new Error(errMsg(src, dest, funcName))
+  }
+
+  return checkParentPaths(src, srcStat, destParent, funcName)
+}
+
+function checkParentPathsSync (src, srcStat, dest, funcName) {
+  const srcParent = path.resolve(path.dirname(src))
+  const destParent = path.resolve(path.dirname(dest))
+  if (destParent === srcParent || destParent === path.parse(destParent).root) return
+  let destStat
+  try {
+    destStat = fs.statSync(destParent, { bigint: true })
+  } catch (err) {
+    if (err.code === 'ENOENT') return
+    throw err
+  }
+  if (areIdentical(srcStat, destStat)) {
+    throw new Error(errMsg(src, dest, funcName))
+  }
+  return checkParentPathsSync(src, srcStat, destParent, funcName)
+}
+
+function areIdentical (srcStat, destStat) {
+  return destStat.ino && destStat.dev && destStat.ino === srcStat.ino && destStat.dev === srcStat.dev
+}
+
+// return true if dest is a subdir of src, otherwise false.
+// It only checks the path strings.
+function isSrcSubdir (src, dest) {
+  const srcArr = path.resolve(src).split(path.sep).filter(i => i)
+  const destArr = path.resolve(dest).split(path.sep).filter(i => i)
+  return srcArr.every((cur, i) => destArr[i] === cur)
+}
+
+function errMsg (src, dest, funcName) {
+  return `Cannot ${funcName} '${src}' to a subdirectory of itself, '${dest}'.`
+}
+
+module.exports = {
+  // checkPaths
+  checkPaths: u(checkPaths),
+  checkPathsSync,
+  // checkParent
+  checkParentPaths: u(checkParentPaths),
+  checkParentPathsSync,
+  // Misc
+  isSrcSubdir,
+  areIdentical
+}
+
+
+/***/ }),
+/* 24 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const fs = __webpack_require__(7)
+const path = __webpack_require__(3)
+const mkdirsSync = (__webpack_require__(18).mkdirsSync)
+const utimesMillisSync = (__webpack_require__(22).utimesMillisSync)
+const stat = __webpack_require__(23)
+
+function copySync (src, dest, opts) {
+  if (typeof opts === 'function') {
+    opts = { filter: opts }
+  }
+
+  opts = opts || {}
+  opts.clobber = 'clobber' in opts ? !!opts.clobber : true // default to true for now
+  opts.overwrite = 'overwrite' in opts ? !!opts.overwrite : opts.clobber // overwrite falls back to clobber
+
+  // Warn about using preserveTimestamps on 32-bit node
+  if (opts.preserveTimestamps && process.arch === 'ia32') {
+    process.emitWarning(
+      'Using the preserveTimestamps option in 32-bit node is not recommended;\n\n' +
+      '\tsee https://github.com/jprichardson/node-fs-extra/issues/269',
+      'Warning', 'fs-extra-WARN0002'
+    )
+  }
+
+  const { srcStat, destStat } = stat.checkPathsSync(src, dest, 'copy', opts)
+  stat.checkParentPathsSync(src, srcStat, dest, 'copy')
+  if (opts.filter && !opts.filter(src, dest)) return
+  const destParent = path.dirname(dest)
+  if (!fs.existsSync(destParent)) mkdirsSync(destParent)
+  return getStats(destStat, src, dest, opts)
+}
+
+function getStats (destStat, src, dest, opts) {
+  const statSync = opts.dereference ? fs.statSync : fs.lstatSync
+  const srcStat = statSync(src)
+
+  if (srcStat.isDirectory()) return onDir(srcStat, destStat, src, dest, opts)
+  else if (srcStat.isFile() ||
+           srcStat.isCharacterDevice() ||
+           srcStat.isBlockDevice()) return onFile(srcStat, destStat, src, dest, opts)
+  else if (srcStat.isSymbolicLink()) return onLink(destStat, src, dest, opts)
+  else if (srcStat.isSocket()) throw new Error(`Cannot copy a socket file: ${src}`)
+  else if (srcStat.isFIFO()) throw new Error(`Cannot copy a FIFO pipe: ${src}`)
+  throw new Error(`Unknown file: ${src}`)
+}
+
+function onFile (srcStat, destStat, src, dest, opts) {
+  if (!destStat) return copyFile(srcStat, src, dest, opts)
+  return mayCopyFile(srcStat, src, dest, opts)
+}
+
+function mayCopyFile (srcStat, src, dest, opts) {
+  if (opts.overwrite) {
+    fs.unlinkSync(dest)
+    return copyFile(srcStat, src, dest, opts)
+  } else if (opts.errorOnExist) {
+    throw new Error(`'${dest}' already exists`)
+  }
+}
+
+function copyFile (srcStat, src, dest, opts) {
+  fs.copyFileSync(src, dest)
+  if (opts.preserveTimestamps) handleTimestamps(srcStat.mode, src, dest)
+  return setDestMode(dest, srcStat.mode)
+}
+
+function handleTimestamps (srcMode, src, dest) {
+  // Make sure the file is writable before setting the timestamp
+  // otherwise open fails with EPERM when invoked with 'r+'
+  // (through utimes call)
+  if (fileIsNotWritable(srcMode)) makeFileWritable(dest, srcMode)
+  return setDestTimestamps(src, dest)
+}
+
+function fileIsNotWritable (srcMode) {
+  return (srcMode & 0o200) === 0
+}
+
+function makeFileWritable (dest, srcMode) {
+  return setDestMode(dest, srcMode | 0o200)
+}
+
+function setDestMode (dest, srcMode) {
+  return fs.chmodSync(dest, srcMode)
+}
+
+function setDestTimestamps (src, dest) {
+  // The initial srcStat.atime cannot be trusted
+  // because it is modified by the read(2) system call
+  // (See https://nodejs.org/api/fs.html#fs_stat_time_values)
+  const updatedSrcStat = fs.statSync(src)
+  return utimesMillisSync(dest, updatedSrcStat.atime, updatedSrcStat.mtime)
+}
+
+function onDir (srcStat, destStat, src, dest, opts) {
+  if (!destStat) return mkDirAndCopy(srcStat.mode, src, dest, opts)
+  return copyDir(src, dest, opts)
+}
+
+function mkDirAndCopy (srcMode, src, dest, opts) {
+  fs.mkdirSync(dest)
+  copyDir(src, dest, opts)
+  return setDestMode(dest, srcMode)
+}
+
+function copyDir (src, dest, opts) {
+  fs.readdirSync(src).forEach(item => copyDirItem(item, src, dest, opts))
+}
+
+function copyDirItem (item, src, dest, opts) {
+  const srcItem = path.join(src, item)
+  const destItem = path.join(dest, item)
+  if (opts.filter && !opts.filter(srcItem, destItem)) return
+  const { destStat } = stat.checkPathsSync(srcItem, destItem, 'copy', opts)
+  return getStats(destStat, srcItem, destItem, opts)
+}
+
+function onLink (destStat, src, dest, opts) {
+  let resolvedSrc = fs.readlinkSync(src)
+  if (opts.dereference) {
+    resolvedSrc = path.resolve(process.cwd(), resolvedSrc)
+  }
+
+  if (!destStat) {
+    return fs.symlinkSync(resolvedSrc, dest)
+  } else {
+    let resolvedDest
+    try {
+      resolvedDest = fs.readlinkSync(dest)
+    } catch (err) {
+      // dest exists and is a regular file or directory,
+      // Windows may throw UNKNOWN error. If dest already exists,
+      // fs throws error anyway, so no need to guard against it here.
+      if (err.code === 'EINVAL' || err.code === 'UNKNOWN') return fs.symlinkSync(resolvedSrc, dest)
+      throw err
+    }
+    if (opts.dereference) {
+      resolvedDest = path.resolve(process.cwd(), resolvedDest)
+    }
+    if (stat.isSrcSubdir(resolvedSrc, resolvedDest)) {
+      throw new Error(`Cannot copy '${resolvedSrc}' to a subdirectory of itself, '${resolvedDest}'.`)
+    }
+
+    // prevent copy if src is a subdir of dest since unlinking
+    // dest in this case would result in removing src contents
+    // and therefore a broken symlink would be created.
+    if (stat.isSrcSubdir(resolvedDest, resolvedSrc)) {
+      throw new Error(`Cannot overwrite '${resolvedDest}' with '${resolvedSrc}'.`)
+    }
+    return copyLink(resolvedSrc, dest)
+  }
+}
+
+function copyLink (resolvedSrc, dest) {
+  fs.unlinkSync(dest)
+  return fs.symlinkSync(resolvedSrc, dest)
+}
+
+module.exports = copySync
+
+
+/***/ }),
+/* 25 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const u = (__webpack_require__(6).fromPromise)
+const fs = __webpack_require__(5)
+const path = __webpack_require__(3)
+const mkdir = __webpack_require__(18)
+const remove = __webpack_require__(26)
+
+const emptyDir = u(async function emptyDir (dir) {
+  let items
+  try {
+    items = await fs.readdir(dir)
+  } catch {
+    return mkdir.mkdirs(dir)
+  }
+
+  return Promise.all(items.map(item => remove.remove(path.join(dir, item))))
+})
+
+function emptyDirSync (dir) {
+  let items
+  try {
+    items = fs.readdirSync(dir)
+  } catch {
+    return mkdir.mkdirsSync(dir)
+  }
+
+  items.forEach(item => {
+    item = path.join(dir, item)
+    remove.removeSync(item)
+  })
+}
+
+module.exports = {
+  emptyDirSync,
+  emptydirSync: emptyDirSync,
+  emptyDir,
+  emptydir: emptyDir
+}
+
+
+/***/ }),
+/* 26 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const fs = __webpack_require__(7)
+const u = (__webpack_require__(6).fromCallback)
+
+function remove (path, callback) {
+  fs.rm(path, { recursive: true, force: true }, callback)
+}
+
+function removeSync (path) {
+  fs.rmSync(path, { recursive: true, force: true })
+}
+
+module.exports = {
+  remove: u(remove),
+  removeSync
+}
+
+
+/***/ }),
+/* 27 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const { createFile, createFileSync } = __webpack_require__(28)
+const { createLink, createLinkSync } = __webpack_require__(29)
+const { createSymlink, createSymlinkSync } = __webpack_require__(30)
+
+module.exports = {
+  // file
+  createFile,
+  createFileSync,
+  ensureFile: createFile,
+  ensureFileSync: createFileSync,
+  // link
+  createLink,
+  createLinkSync,
+  ensureLink: createLink,
+  ensureLinkSync: createLinkSync,
+  // symlink
+  createSymlink,
+  createSymlinkSync,
+  ensureSymlink: createSymlink,
+  ensureSymlinkSync: createSymlinkSync
+}
+
+
+/***/ }),
+/* 28 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const u = (__webpack_require__(6).fromPromise)
+const path = __webpack_require__(3)
+const fs = __webpack_require__(5)
+const mkdir = __webpack_require__(18)
+
+async function createFile (file) {
+  let stats
+  try {
+    stats = await fs.stat(file)
+  } catch { }
+  if (stats && stats.isFile()) return
+
+  const dir = path.dirname(file)
+
+  let dirStats = null
+  try {
+    dirStats = await fs.stat(dir)
+  } catch (err) {
+    // if the directory doesn't exist, make it
+    if (err.code === 'ENOENT') {
+      await mkdir.mkdirs(dir)
+      await fs.writeFile(file, '')
+      return
+    } else {
+      throw err
+    }
+  }
+
+  if (dirStats.isDirectory()) {
+    await fs.writeFile(file, '')
+  } else {
+    // parent is not a directory
+    // This is just to cause an internal ENOTDIR error to be thrown
+    await fs.readdir(dir)
+  }
+}
+
+function createFileSync (file) {
+  let stats
+  try {
+    stats = fs.statSync(file)
+  } catch { }
+  if (stats && stats.isFile()) return
+
+  const dir = path.dirname(file)
+  try {
+    if (!fs.statSync(dir).isDirectory()) {
+      // parent is not a directory
+      // This is just to cause an internal ENOTDIR error to be thrown
+      fs.readdirSync(dir)
+    }
+  } catch (err) {
+    // If the stat call above failed because the directory doesn't exist, create it
+    if (err && err.code === 'ENOENT') mkdir.mkdirsSync(dir)
+    else throw err
+  }
+
+  fs.writeFileSync(file, '')
+}
+
+module.exports = {
+  createFile: u(createFile),
+  createFileSync
+}
+
+
+/***/ }),
+/* 29 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const u = (__webpack_require__(6).fromPromise)
+const path = __webpack_require__(3)
+const fs = __webpack_require__(5)
+const mkdir = __webpack_require__(18)
+const { pathExists } = __webpack_require__(21)
+const { areIdentical } = __webpack_require__(23)
+
+async function createLink (srcpath, dstpath) {
+  let dstStat
+  try {
+    dstStat = await fs.lstat(dstpath)
+  } catch {
+    // ignore error
+  }
+
+  let srcStat
+  try {
+    srcStat = await fs.lstat(srcpath)
+  } catch (err) {
+    err.message = err.message.replace('lstat', 'ensureLink')
+    throw err
+  }
+
+  if (dstStat && areIdentical(srcStat, dstStat)) return
+
+  const dir = path.dirname(dstpath)
+
+  const dirExists = await pathExists(dir)
+
+  if (!dirExists) {
+    await mkdir.mkdirs(dir)
+  }
+
+  await fs.link(srcpath, dstpath)
+}
+
+function createLinkSync (srcpath, dstpath) {
+  let dstStat
+  try {
+    dstStat = fs.lstatSync(dstpath)
+  } catch {}
+
+  try {
+    const srcStat = fs.lstatSync(srcpath)
+    if (dstStat && areIdentical(srcStat, dstStat)) return
+  } catch (err) {
+    err.message = err.message.replace('lstat', 'ensureLink')
+    throw err
+  }
+
+  const dir = path.dirname(dstpath)
+  const dirExists = fs.existsSync(dir)
+  if (dirExists) return fs.linkSync(srcpath, dstpath)
+  mkdir.mkdirsSync(dir)
+
+  return fs.linkSync(srcpath, dstpath)
+}
+
+module.exports = {
+  createLink: u(createLink),
+  createLinkSync
+}
+
+
+/***/ }),
+/* 30 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const u = (__webpack_require__(6).fromPromise)
+const path = __webpack_require__(3)
+const fs = __webpack_require__(5)
+
+const { mkdirs, mkdirsSync } = __webpack_require__(18)
+
+const { symlinkPaths, symlinkPathsSync } = __webpack_require__(31)
+const { symlinkType, symlinkTypeSync } = __webpack_require__(32)
+
+const { pathExists } = __webpack_require__(21)
+
+const { areIdentical } = __webpack_require__(23)
+
+async function createSymlink (srcpath, dstpath, type) {
+  let stats
+  try {
+    stats = await fs.lstat(dstpath)
+  } catch { }
+
+  if (stats && stats.isSymbolicLink()) {
+    const [srcStat, dstStat] = await Promise.all([
+      fs.stat(srcpath),
+      fs.stat(dstpath)
+    ])
+
+    if (areIdentical(srcStat, dstStat)) return
+  }
+
+  const relative = await symlinkPaths(srcpath, dstpath)
+  srcpath = relative.toDst
+  const toType = await symlinkType(relative.toCwd, type)
+  const dir = path.dirname(dstpath)
+
+  if (!(await pathExists(dir))) {
+    await mkdirs(dir)
+  }
+
+  return fs.symlink(srcpath, dstpath, toType)
+}
+
+function createSymlinkSync (srcpath, dstpath, type) {
+  let stats
+  try {
+    stats = fs.lstatSync(dstpath)
+  } catch { }
+  if (stats && stats.isSymbolicLink()) {
+    const srcStat = fs.statSync(srcpath)
+    const dstStat = fs.statSync(dstpath)
+    if (areIdentical(srcStat, dstStat)) return
+  }
+
+  const relative = symlinkPathsSync(srcpath, dstpath)
+  srcpath = relative.toDst
+  type = symlinkTypeSync(relative.toCwd, type)
+  const dir = path.dirname(dstpath)
+  const exists = fs.existsSync(dir)
+  if (exists) return fs.symlinkSync(srcpath, dstpath, type)
+  mkdirsSync(dir)
+  return fs.symlinkSync(srcpath, dstpath, type)
+}
+
+module.exports = {
+  createSymlink: u(createSymlink),
+  createSymlinkSync
+}
+
+
+/***/ }),
+/* 31 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const path = __webpack_require__(3)
+const fs = __webpack_require__(5)
+const { pathExists } = __webpack_require__(21)
+
+const u = (__webpack_require__(6).fromPromise)
+
+/**
+ * Function that returns two types of paths, one relative to symlink, and one
+ * relative to the current working directory. Checks if path is absolute or
+ * relative. If the path is relative, this function checks if the path is
+ * relative to symlink or relative to current working directory. This is an
+ * initiative to find a smarter `srcpath` to supply when building symlinks.
+ * This allows you to determine which path to use out of one of three possible
+ * types of source paths. The first is an absolute path. This is detected by
+ * `path.isAbsolute()`. When an absolute path is provided, it is checked to
+ * see if it exists. If it does it's used, if not an error is returned
+ * (callback)/ thrown (sync). The other two options for `srcpath` are a
+ * relative url. By default Node's `fs.symlink` works by creating a symlink
+ * using `dstpath` and expects the `srcpath` to be relative to the newly
+ * created symlink. If you provide a `srcpath` that does not exist on the file
+ * system it results in a broken symlink. To minimize this, the function
+ * checks to see if the 'relative to symlink' source file exists, and if it
+ * does it will use it. If it does not, it checks if there's a file that
+ * exists that is relative to the current working directory, if does its used.
+ * This preserves the expectations of the original fs.symlink spec and adds
+ * the ability to pass in `relative to current working direcotry` paths.
+ */
+
+async function symlinkPaths (srcpath, dstpath) {
+  if (path.isAbsolute(srcpath)) {
+    try {
+      await fs.lstat(srcpath)
+    } catch (err) {
+      err.message = err.message.replace('lstat', 'ensureSymlink')
+      throw err
+    }
+
+    return {
+      toCwd: srcpath,
+      toDst: srcpath
+    }
+  }
+
+  const dstdir = path.dirname(dstpath)
+  const relativeToDst = path.join(dstdir, srcpath)
+
+  const exists = await pathExists(relativeToDst)
+  if (exists) {
+    return {
+      toCwd: relativeToDst,
+      toDst: srcpath
+    }
+  }
+
+  try {
+    await fs.lstat(srcpath)
+  } catch (err) {
+    err.message = err.message.replace('lstat', 'ensureSymlink')
+    throw err
+  }
+
+  return {
+    toCwd: srcpath,
+    toDst: path.relative(dstdir, srcpath)
+  }
+}
+
+function symlinkPathsSync (srcpath, dstpath) {
+  if (path.isAbsolute(srcpath)) {
+    const exists = fs.existsSync(srcpath)
+    if (!exists) throw new Error('absolute srcpath does not exist')
+    return {
+      toCwd: srcpath,
+      toDst: srcpath
+    }
+  }
+
+  const dstdir = path.dirname(dstpath)
+  const relativeToDst = path.join(dstdir, srcpath)
+  const exists = fs.existsSync(relativeToDst)
+  if (exists) {
+    return {
+      toCwd: relativeToDst,
+      toDst: srcpath
+    }
+  }
+
+  const srcExists = fs.existsSync(srcpath)
+  if (!srcExists) throw new Error('relative srcpath does not exist')
+  return {
+    toCwd: srcpath,
+    toDst: path.relative(dstdir, srcpath)
+  }
+}
+
+module.exports = {
+  symlinkPaths: u(symlinkPaths),
+  symlinkPathsSync
+}
+
+
+/***/ }),
+/* 32 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const fs = __webpack_require__(5)
+const u = (__webpack_require__(6).fromPromise)
+
+async function symlinkType (srcpath, type) {
+  if (type) return type
+
+  let stats
+  try {
+    stats = await fs.lstat(srcpath)
+  } catch {
+    return 'file'
+  }
+
+  return (stats && stats.isDirectory()) ? 'dir' : 'file'
+}
+
+function symlinkTypeSync (srcpath, type) {
+  if (type) return type
+
+  let stats
+  try {
+    stats = fs.lstatSync(srcpath)
+  } catch {
+    return 'file'
+  }
+  return (stats && stats.isDirectory()) ? 'dir' : 'file'
+}
+
+module.exports = {
+  symlinkType: u(symlinkType),
+  symlinkTypeSync
+}
+
+
+/***/ }),
+/* 33 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const u = (__webpack_require__(6).fromPromise)
+const jsonFile = __webpack_require__(34)
+
+jsonFile.outputJson = u(__webpack_require__(37))
+jsonFile.outputJsonSync = __webpack_require__(39)
+// aliases
+jsonFile.outputJSON = jsonFile.outputJson
+jsonFile.outputJSONSync = jsonFile.outputJsonSync
+jsonFile.writeJSON = jsonFile.writeJson
+jsonFile.writeJSONSync = jsonFile.writeJsonSync
+jsonFile.readJSON = jsonFile.readJson
+jsonFile.readJSONSync = jsonFile.readJsonSync
+
+module.exports = jsonFile
+
+
+/***/ }),
+/* 34 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const jsonFile = __webpack_require__(35)
+
+module.exports = {
+  // jsonfile exports
+  readJson: jsonFile.readFile,
+  readJsonSync: jsonFile.readFileSync,
+  writeJson: jsonFile.writeFile,
+  writeJsonSync: jsonFile.writeFileSync
+}
+
+
+/***/ }),
+/* 35 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+let _fs
+try {
+  _fs = __webpack_require__(7)
+} catch (_) {
+  _fs = __webpack_require__(8)
+}
+const universalify = __webpack_require__(6)
+const { stringify, stripBom } = __webpack_require__(36)
+
+async function _readFile (file, options = {}) {
+  if (typeof options === 'string') {
+    options = { encoding: options }
+  }
+
+  const fs = options.fs || _fs
+
+  const shouldThrow = 'throws' in options ? options.throws : true
+
+  let data = await universalify.fromCallback(fs.readFile)(file, options)
+
+  data = stripBom(data)
+
+  let obj
+  try {
+    obj = JSON.parse(data, options ? options.reviver : null)
+  } catch (err) {
+    if (shouldThrow) {
+      err.message = `${file}: ${err.message}`
+      throw err
+    } else {
+      return null
+    }
+  }
+
+  return obj
+}
+
+const readFile = universalify.fromPromise(_readFile)
+
+function readFileSync (file, options = {}) {
+  if (typeof options === 'string') {
+    options = { encoding: options }
+  }
+
+  const fs = options.fs || _fs
+
+  const shouldThrow = 'throws' in options ? options.throws : true
+
+  try {
+    let content = fs.readFileSync(file, options)
+    content = stripBom(content)
+    return JSON.parse(content, options.reviver)
+  } catch (err) {
+    if (shouldThrow) {
+      err.message = `${file}: ${err.message}`
+      throw err
+    } else {
+      return null
+    }
+  }
+}
+
+async function _writeFile (file, obj, options = {}) {
+  const fs = options.fs || _fs
+
+  const str = stringify(obj, options)
+
+  await universalify.fromCallback(fs.writeFile)(file, str, options)
+}
+
+const writeFile = universalify.fromPromise(_writeFile)
+
+function writeFileSync (file, obj, options = {}) {
+  const fs = options.fs || _fs
+
+  const str = stringify(obj, options)
+  // not sure if fs.writeFileSync returns anything, but just in case
+  return fs.writeFileSync(file, str, options)
+}
+
+const jsonfile = {
+  readFile,
+  readFileSync,
+  writeFile,
+  writeFileSync
+}
+
+module.exports = jsonfile
+
+
+/***/ }),
+/* 36 */
+/***/ ((module) => {
+
+function stringify (obj, { EOL = '\n', finalEOL = true, replacer = null, spaces } = {}) {
+  const EOF = finalEOL ? EOL : ''
+  const str = JSON.stringify(obj, replacer, spaces)
+
+  return str.replace(/\n/g, EOL) + EOF
+}
+
+function stripBom (content) {
+  // we do this because JSON.parse would convert it to a utf8 string if encoding wasn't specified
+  if (Buffer.isBuffer(content)) content = content.toString('utf8')
+  return content.replace(/^\uFEFF/, '')
+}
+
+module.exports = { stringify, stripBom }
+
+
+/***/ }),
+/* 37 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const { stringify } = __webpack_require__(36)
+const { outputFile } = __webpack_require__(38)
+
+async function outputJson (file, data, options = {}) {
+  const str = stringify(data, options)
+
+  await outputFile(file, str, options)
+}
+
+module.exports = outputJson
+
+
+/***/ }),
+/* 38 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const u = (__webpack_require__(6).fromPromise)
+const fs = __webpack_require__(5)
+const path = __webpack_require__(3)
+const mkdir = __webpack_require__(18)
+const pathExists = (__webpack_require__(21).pathExists)
+
+async function outputFile (file, data, encoding = 'utf-8') {
+  const dir = path.dirname(file)
+
+  if (!(await pathExists(dir))) {
+    await mkdir.mkdirs(dir)
+  }
+
+  return fs.writeFile(file, data, encoding)
+}
+
+function outputFileSync (file, ...args) {
+  const dir = path.dirname(file)
+  if (!fs.existsSync(dir)) {
+    mkdir.mkdirsSync(dir)
+  }
+
+  fs.writeFileSync(file, ...args)
+}
+
+module.exports = {
+  outputFile: u(outputFile),
+  outputFileSync
+}
+
+
+/***/ }),
+/* 39 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const { stringify } = __webpack_require__(36)
+const { outputFileSync } = __webpack_require__(38)
+
+function outputJsonSync (file, data, options) {
+  const str = stringify(data, options)
+
+  outputFileSync(file, str, options)
+}
+
+module.exports = outputJsonSync
+
+
+/***/ }),
+/* 40 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const u = (__webpack_require__(6).fromPromise)
+module.exports = {
+  move: u(__webpack_require__(41)),
+  moveSync: __webpack_require__(42)
+}
+
+
+/***/ }),
+/* 41 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const fs = __webpack_require__(5)
+const path = __webpack_require__(3)
+const { copy } = __webpack_require__(16)
+const { remove } = __webpack_require__(26)
+const { mkdirp } = __webpack_require__(18)
+const { pathExists } = __webpack_require__(21)
+const stat = __webpack_require__(23)
+
+async function move (src, dest, opts = {}) {
+  const overwrite = opts.overwrite || opts.clobber || false
+
+  const { srcStat, isChangingCase = false } = await stat.checkPaths(src, dest, 'move', opts)
+
+  await stat.checkParentPaths(src, srcStat, dest, 'move')
+
+  // If the parent of dest is not root, make sure it exists before proceeding
+  const destParent = path.dirname(dest)
+  const parsedParentPath = path.parse(destParent)
+  if (parsedParentPath.root !== destParent) {
+    await mkdirp(destParent)
+  }
+
+  return doRename(src, dest, overwrite, isChangingCase)
+}
+
+async function doRename (src, dest, overwrite, isChangingCase) {
+  if (!isChangingCase) {
+    if (overwrite) {
+      await remove(dest)
+    } else if (await pathExists(dest)) {
+      throw new Error('dest already exists.')
+    }
+  }
+
+  try {
+    // Try w/ rename first, and try copy + remove if EXDEV
+    await fs.rename(src, dest)
+  } catch (err) {
+    if (err.code !== 'EXDEV') {
+      throw err
+    }
+    await moveAcrossDevice(src, dest, overwrite)
+  }
+}
+
+async function moveAcrossDevice (src, dest, overwrite) {
+  const opts = {
+    overwrite,
+    errorOnExist: true,
+    preserveTimestamps: true
+  }
+
+  await copy(src, dest, opts)
+  return remove(src)
+}
+
+module.exports = move
+
+
+/***/ }),
+/* 42 */
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+
+
+const fs = __webpack_require__(7)
+const path = __webpack_require__(3)
+const copySync = (__webpack_require__(16).copySync)
+const removeSync = (__webpack_require__(26).removeSync)
+const mkdirpSync = (__webpack_require__(18).mkdirpSync)
+const stat = __webpack_require__(23)
+
+function moveSync (src, dest, opts) {
+  opts = opts || {}
+  const overwrite = opts.overwrite || opts.clobber || false
+
+  const { srcStat, isChangingCase = false } = stat.checkPathsSync(src, dest, 'move', opts)
+  stat.checkParentPathsSync(src, srcStat, dest, 'move')
+  if (!isParentRoot(dest)) mkdirpSync(path.dirname(dest))
+  return doRename(src, dest, overwrite, isChangingCase)
+}
+
+function isParentRoot (dest) {
+  const parent = path.dirname(dest)
+  const parsedPath = path.parse(parent)
+  return parsedPath.root === parent
+}
+
+function doRename (src, dest, overwrite, isChangingCase) {
+  if (isChangingCase) return rename(src, dest, overwrite)
+  if (overwrite) {
+    removeSync(dest)
+    return rename(src, dest, overwrite)
+  }
+  if (fs.existsSync(dest)) throw new Error('dest already exists.')
+  return rename(src, dest, overwrite)
+}
+
+function rename (src, dest, overwrite) {
+  try {
+    fs.renameSync(src, dest)
+  } catch (err) {
+    if (err.code !== 'EXDEV') throw err
+    return moveAcrossDevice(src, dest, overwrite)
+  }
+}
+
+function moveAcrossDevice (src, dest, overwrite) {
+  const opts = {
+    overwrite,
+    errorOnExist: true,
+    preserveTimestamps: true
+  }
+  copySync(src, dest, opts)
+  return removeSync(src)
+}
+
+module.exports = moveSync
+
+
+/***/ }),
+/* 43 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.registerCreateSnippets = void 0;
+const vscode_1 = __webpack_require__(2);
+const webviewUtils_1 = __webpack_require__(44);
+const registerCreateSnippets = (context) => {
+    context.subscriptions.push(vscode_1.commands.registerCommand("DiFlow.createSnippets", async () => {
+        (0, webviewUtils_1.showWebView)(context, {
+            key: "main",
+            title: "添加代码片段",
+            viewColumn: 1,
+            task: {
+                task: "route",
+                data: {
+                    path: "/add-snippets",
+                },
+            },
+        });
+    }));
+};
+exports.registerCreateSnippets = registerCreateSnippets;
+
+
+/***/ }),
+/* 44 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.getHtmlForWebview = exports.showWebView = void 0;
+const vscode = __webpack_require__(2);
+const snippet = __webpack_require__(45);
+const cursorIntegration_1 = __webpack_require__(46);
+const path = __webpack_require__(3);
+const fs = __webpack_require__(8);
+// 当前的webview列表
+let webviewPanelList = [];
+// 创建 Cursor 集成实例
+const cursorIntegration = new cursorIntegration_1.CursorIntegration();
+// 创建webview
+const showWebView = (context, options) => {
+    // 先判断，webview是否存在了，存在了则不新增，传递消息给webview处理后续
+    const webview = webviewPanelList.find((s) => s.key === options.key);
+    if (webview) {
+        webview.panel.reveal(); // 显示webview
+        // 传递任务
+        if (options.task) {
+            webview.panel.webview.postMessage({
+                cmd: "vscodePushTask",
+                task: options.task.task,
+                data: options.task.data,
+            });
+        }
+    }
+    else {
+        const panel = vscode.window.createWebviewPanel("DiFlow", options.title || "DiFlow", {
+            viewColumn: options.viewColumn || vscode.ViewColumn.Two,
+        }, {
+            enableScripts: true,
+            retainContextWhenHidden: true, // webview被隐藏时保持状态，避免被重置
+        });
+        // 设置icon
+        panel.iconPath = vscode.Uri.file(path.join(context.extensionPath, "images", "title.jpg"));
+        panel.webview.html = (0, exports.getHtmlForWebview)(context, panel.webview);
+        // 创建监听器，监听 webview 返回信息，
+        // 在webview中会通过 vscode.postMessage{command: 'someCommand',data: { /* 你的数据 */ },} 发送信息
+        // 创建资源管理列表
+        const disposables = [];
+        panel.webview.onDidReceiveMessage(async (message) => {
+            // 监听webview反馈回来加载完成，初始化主动推送消息
+            if (message.cmd === "webviewLoaded") {
+                if (options.task) {
+                    panel.webview.postMessage({
+                        cmd: "vscodePushTask",
+                        task: options?.task?.task,
+                        data: options?.task?.data,
+                    });
+                }
+            }
+            // 分发别的任务
+            if (taskMap[message.cmd]) {
+                // 将回调消息传递到分发任务中
+                taskMap[message.cmd](context, message);
+            }
+        }, null, disposables);
+        // 关闭时销毁
+        panel.onDidDispose(() => {
+            panel.dispose();
+            while (disposables.length) {
+                const x = disposables.pop();
+                if (x) {
+                    x.dispose();
+                }
+            }
+            // 去掉该 panel
+            webviewPanelList = webviewPanelList.filter((s) => s.key !== options.key);
+        }, null, disposables);
+        // 添加
+        webviewPanelList.push({
+            key: options.key,
+            panel,
+            disposables,
+        });
+        // 如果有任务，执行任务
+        if (options.task) {
+            setTimeout(() => {
+                panel.webview.postMessage({
+                    cmd: "vscodePushTask",
+                    task: options.task.task,
+                    data: options.task.data,
+                });
+            }, 500);
+        }
+    }
+};
+exports.showWebView = showWebView;
+// 获取 webview html
+const getHtmlForWebview = (context, webview) => {
+    const isProduction = context.extensionMode === vscode.ExtensionMode.Production;
+    let srcUrl = "";
+    console.log("isProduction", isProduction);
+    if (isProduction) {
+        console.log("webview-dist/main.mjs");
+        const mainScriptPathOnDisk = vscode.Uri.file(path.join(context.extensionPath, "webview-dist", "main.mjs"));
+        srcUrl = webview.asWebviewUri(mainScriptPathOnDisk);
+    }
+    else {
+        console.log("localhost:7979/src/main.ts");
+        srcUrl = "http://localhost:7979/src/main.ts";
+    }
+    return getWebviewContent(srcUrl);
+};
+exports.getHtmlForWebview = getHtmlForWebview;
+// webview html 容器
+const getWebviewContent = (srcUri) => {
+    return `<!doctype html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
+      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' vscode-webview: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; style-src 'unsafe-inline' vscode-webview: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; connect-src vscode-webview: http://localhost:* https://localhost:* ws://localhost:* wss://localhost:* http://127.0.0.1:* https://127.0.0.1:* ws://127.0.0.1:* wss://127.0.0.1:*; img-src vscode-webview: data: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; font-src vscode-webview: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*;">
+      <title>webview-react</title>
+      <script>
+         window.vscode = acquireVsCodeApi();
+         window.process = {
+           env: {
+             NODE_ENV: "production",
+           },
+         }
+         // 添加调试信息
+         console.log("Webview CSP configured for localhost and 127.0.0.1");
+      </script>
+    </head>
+    <body>
+      <div id="app"></div>
+      <script  type="module" src="${srcUri}"></script>
+    </body>
+    </html>`;
+};
+/**
+ * 类型安全的数据访问辅助函数
+ */
+function getTaskData(data) {
+    return data && typeof data === "object" && data !== null
+        ? data
+        : {};
+}
+/**
+ * 任务映射表
+ */
+const taskMap = {};
+// 添加更新用户规则任务
+taskMap.updateUserRules = async (context, message) => {
+    try {
+        console.log("更新用户规则...", message.data);
+        const data = message.data;
+        const rules = data?.rules;
+        if (typeof rules !== "string") {
+            throw new Error("规则内容必须是字符串类型");
+        }
+        const result = await cursorIntegration.updateUserRules(rules);
+        console.log("更新用户规则结果:", result);
+        // 发送结果回 webview - 修复返回格式
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    data: result, // 前端期望在 result.data 中获取实际结果
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("updateUserRules task failed:", error);
+        // 发送错误回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                },
+            });
+        }
+    }
+};
+// 添加获取 Cursor 设置任务
+taskMap.getCursorSettings = async (context, message) => {
+    try {
+        console.log("获取 Cursor 设置...");
+        const settings = await cursorIntegration.getCursorSettings();
+        console.log("Cursor 设置:", settings);
+        // 发送结果回 webview - 修复返回格式
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    data: settings, // 前端期望在 result.data 中获取实际结果
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("getCursorSettings task failed:", error);
+        // 发送错误回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                },
+            });
+        }
+    }
+};
+taskMap.updateCursorSettings = async (context, message) => {
+    try {
+        console.log("更新 Cursor 设置...", message.data);
+        const result = await cursorIntegration.updateCursorSettings(message.data);
+        console.log("更新 Cursor 设置结果:", result);
+        // 发送结果回 webview - 修复返回格式
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    data: result, // 前端期望在 result.data 中获取实际结果
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("updateCursorSettings task failed:", error);
+        // 发送错误回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error.message,
+                },
+            });
+        }
+    }
+};
+// 添加 snippet 任务处理器
+taskMap.addSnippets = async (context, message) => {
+    try {
+        // 确保 message.data 包含必要的字段
+        const data = message.data;
+        if (!data || typeof data !== "object") {
+            throw new Error("缺少必要的数据");
+        }
+        // 类型断言确保数据结构正确
+        const snippetData = data;
+        if (!snippetData.tips ||
+            !snippetData.prefix ||
+            !snippetData.body ||
+            !snippetData.description) {
+            throw new Error("缺少必要的代码片段字段");
+        }
+        await snippet.addSnippets(context, { data: snippetData });
+    }
+    catch (error) {
+        console.error("addSnippets task failed:", error);
+    }
+};
+taskMap.openCursorChat = async (context, message) => {
+    try {
+        console.log("打开 Cursor 聊天...", message.data);
+        const result = await cursorIntegration.openCursorChat(message.data?.message);
+        console.log("打开 Cursor 聊天结果:", result);
+        // 发送结果回 webview - 修复返回格式
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    data: result, // 前端期望在 result.data 中获取实际结果
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("openCursorChat task failed:", error);
+        // 发送错误回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                },
+            });
+        }
+    }
+};
+// 添加发送消息到Cursor Chat的任务处理器
+taskMap.sendToCursorChat = async (context, message) => {
+    try {
+        console.log("发送消息到 Cursor Chat...", message.data);
+        const result = await cursorIntegration.openCursorChat(message.data?.message);
+        console.log("发送消息到 Cursor Chat 结果:", result);
+        // 发送结果回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: result,
+                    data: result,
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("sendToCursorChat task failed:", error);
+        // 发送错误回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                },
+            });
+        }
+    }
+};
+taskMap.getMcpServers = async (context, message) => {
+    try {
+        console.log("获取 MCP 服务器列表...");
+        const result = await cursorIntegration.getMcpServers();
+        console.log("MCP 服务器列表:", result);
+        // 发送结果回 webview - 修复返回格式
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    data: result, // 前端期望在 result.data 中获取实际结果
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("getMcpServers task failed:", error);
+        // 发送错误回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                },
+            });
+        }
+    }
+};
+taskMap.addMcpServer = async (context, message) => {
+    try {
+        console.log("添加 MCP 服务器...", message.data);
+        const { name, config } = message.data || {};
+        if (!name || !config) {
+            throw new Error("缺少必要参数：name 或 config");
+        }
+        // 确保 config 包含必要的 command 字段
+        const mcpConfig = config;
+        if (!mcpConfig.command) {
+            throw new Error("MCP 配置缺少必要的 command 字段");
+        }
+        const result = await cursorIntegration.addMcpServer(name, mcpConfig);
+        console.log("添加 MCP 服务器结果:", result);
+        // 发送结果回 webview - 修复返回格式
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    data: result, // 前端期望在 result.data 中获取实际结果
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("addMcpServer task failed:", error);
+        // 发送错误回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                },
+            });
+        }
+    }
+};
+taskMap.removeMcpServer = async (context, message) => {
+    try {
+        console.log("删除 MCP 服务器...", message.data);
+        const name = message.data?.name;
+        if (!name) {
+            throw new Error("缺少必要参数：name");
+        }
+        const result = await cursorIntegration.removeMcpServer(name);
+        console.log("删除 MCP 服务器结果:", result);
+        // 发送结果回 webview - 修复返回格式
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    data: result, // 前端期望在 result.data 中获取实际结果
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("removeMcpServer task failed:", error);
+        // 发送错误回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                },
+            });
+        }
+    }
+};
+// 添加获取用户规则任务
+taskMap.getUserRules = async (context, message) => {
+    try {
+        console.log("获取用户规则...");
+        const userRules = await cursorIntegration.getUserRules();
+        console.log("用户规则:", userRules);
+        // 发送结果回 webview - 修复返回格式
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    data: userRules, // 前端期望在 result.data 中获取实际结果
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("getUserRules task failed:", error);
+        // 发送错误回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                },
+            });
+        }
+    }
+};
+taskMap.getSystemInfo = async (context, message) => {
+    try {
+        console.log("获取系统信息...");
+        const systemInfo = cursorIntegration.getSystemInfo();
+        console.log("系统信息:", systemInfo);
+        // 发送结果回 webview - 修复返回格式
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    data: systemInfo, // 前端期望在 result.data 中获取实际结果
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("getSystemInfo task failed:", error);
+        // 发送错误回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error.message,
+                },
+            });
+        }
+    }
+};
+taskMap.isCursorInstalled = async (context, message) => {
+    try {
+        console.log("开始检测 Cursor 安装状态...");
+        const result = await cursorIntegration.isCursorInstalled();
+        console.log("Cursor 安装检测结果:", result);
+        // 发送结果回 webview - 修复返回格式，确保与前端期望一致
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    data: result, // 前端期望在 result.data 中获取实际结果
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("isCursorInstalled task failed:", error);
+        // 发送错误回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                },
+            });
+        }
+    }
+};
+taskMap.openCursor = async (context, message) => {
+    try {
+        console.log("打开 Cursor...", message.data);
+        const filePath = message.data?.filePath;
+        const result = await cursorIntegration.openCursor(filePath);
+        console.log("打开 Cursor 结果:", result);
+        // 发送结果回 webview - 修复返回格式
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    data: result, // 前端期望在 result.data 中获取实际结果
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("openCursor task failed:", error);
+        // 发送错误回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                },
+            });
+        }
+    }
+};
+taskMap.setCustomInstallPath = async (context, message) => {
+    try {
+        console.log("setCustomInstallPath 收到数据:", message.data);
+        // 修复参数名称匹配问题
+        const customPath = message.data?.path || message.data?.customPath;
+        if (!customPath || typeof customPath !== "string") {
+            throw new Error("未提供有效的安装路径");
+        }
+        console.log("设置自定义安装路径:", customPath);
+        cursorIntegration.setCustomInstallPath(customPath);
+        // 重新检测安装状态
+        const isInstalled = await cursorIntegration.isCursorInstalled();
+        const systemInfo = cursorIntegration.getSystemInfo();
+        console.log("重新检测结果:", { isInstalled, systemInfo });
+        // 发送结果回 webview - 修复返回格式
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    isInstalled,
+                    systemInfo,
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("setCustomInstallPath task failed:", error);
+        // 发送错误回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                },
+            });
+        }
+    }
+};
+// 获取 Cursor 用户信息任务处理器
+taskMap.getCursorUserInfo = async (context, message) => {
+    try {
+        console.log("获取 Cursor 用户信息...");
+        const userInfo = await cursorIntegration.getCursorUserInfo();
+        console.log("Cursor 用户信息:", userInfo);
+        // 发送结果回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    data: userInfo,
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("getCursorUserInfo task failed:", error);
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                },
+            });
+        }
+    }
+};
+// 检查 Cursor 登录状态任务处理器
+taskMap.isCursorLoggedIn = async (context, message) => {
+    try {
+        console.log("检查 Cursor 登录状态...");
+        const isLoggedIn = await cursorIntegration.isCursorLoggedIn();
+        console.log("Cursor 登录状态:", isLoggedIn);
+        // 发送结果回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    data: isLoggedIn,
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("isCursorLoggedIn task failed:", error);
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                },
+            });
+        }
+    }
+};
+// 登录或创建用户任务处理器
+taskMap.loginOrCreateUser = async (context, message) => {
+    try {
+        console.log("获取Cursor用户信息...", message.data);
+        // 获取Cursor用户信息
+        const cursorUserInfo = await cursorIntegration.getCursorUserInfo();
+        console.log("Cursor用户信息:", cursorUserInfo);
+        // 发送用户信息到webview，让webview处理API调用
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    data: cursorUserInfo,
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("loginOrCreateUser task failed:", error);
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error.message,
+                },
+            });
+        }
+    }
+};
+// 同步用户数据任务处理器 - 简化为只返回成功状态
+taskMap.syncUserData = async (context, message) => {
+    try {
+        console.log("同步用户数据任务 - 由webview处理", message.data);
+        // 发送结果回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    message: "任务已转发到webview处理",
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("syncUserData task failed:", error);
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                },
+            });
+        }
+    }
+};
+// 同步规则到服务器任务处理器 - 简化为只返回成功状态
+taskMap.syncRulesToServer = async (context, message) => {
+    try {
+        console.log("同步规则到服务器任务 - 由webview处理", message.data);
+        // 发送结果回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    message: "任务已转发到webview处理",
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("syncRulesToServer task failed:", error);
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                },
+            });
+        }
+    }
+};
+// 同步 MCP 配置到服务器任务处理器 - 简化为只返回成功状态
+taskMap.syncMcpsToServer = async (context, message) => {
+    try {
+        console.log("同步MCP配置到服务器任务 - 由webview处理", message.data);
+        // 发送结果回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    message: "任务已转发到webview处理",
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("syncMcpsToServer task failed:", error);
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                },
+            });
+        }
+    }
+};
+// 网络请求处理器 - 允许 webview 通过扩展进行网络请求
+taskMap.networkRequest = async (context, message) => {
+    try {
+        const requestData = message.data;
+        if (!requestData || typeof requestData !== "object") {
+            throw new Error("请求数据无效");
+        }
+        const { url, method = "GET", headers = {}, body } = requestData;
+        if (!url || typeof url !== "string") {
+            throw new Error("URL 参数无效");
+        }
+        console.log(`网络请求: ${method} ${url}`);
+        // 使用 Node.js 的 https/http 模块进行请求
+        const https = __webpack_require__(49);
+        const http = __webpack_require__(50);
+        const { URL } = __webpack_require__(51);
+        const parsedUrl = new URL(url);
+        const isHttps = parsedUrl.protocol === "https:";
+        const requestModule = isHttps ? https : http;
+        const requestOptions = {
+            hostname: parsedUrl.hostname,
+            port: parsedUrl.port || (isHttps ? 443 : 80),
+            path: parsedUrl.pathname + parsedUrl.search,
+            method: method,
+            headers: {
+                "User-Agent": "DIFlow-VSCode-Extension/1.0.0",
+                ...(typeof headers === "object" && headers !== null ? headers : {}),
+            },
+        };
+        const result = await new Promise((resolve, reject) => {
+            const req = requestModule.request(requestOptions, (res) => {
+                let data = "";
+                res.on("data", (chunk) => {
+                    data += chunk;
+                });
+                res.on("end", () => {
+                    try {
+                        let parsedData;
+                        try {
+                            parsedData = JSON.parse(data);
+                        }
+                        catch {
+                            parsedData = data;
+                        }
+                        resolve({
+                            ok: res.statusCode >= 200 && res.statusCode < 300,
+                            status: res.statusCode,
+                            statusText: res.statusMessage,
+                            data: parsedData,
+                            text: data,
+                            headers: res.headers,
+                        });
+                    }
+                    catch (error) {
+                        reject(error);
+                    }
+                });
+            });
+            req.on("error", (error) => {
+                reject(error);
+            });
+            if (body &&
+                (method === "POST" || method === "PUT" || method === "PATCH")) {
+                req.write(typeof body === "string" ? body : JSON.stringify(body));
+            }
+            req.end();
+        });
+        console.log(`网络请求完成: ${method} ${url} - ${result.status}`);
+        // 发送结果回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: true,
+                    data: result,
+                },
+            });
+        }
+    }
+    catch (error) {
+        console.error("网络请求失败:", error);
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    error: error instanceof Error ? error.message : String(error),
+                },
+            });
+        }
+    }
+};
+// 网络请求代理任务
+taskMap.proxyRequest = async (context, message) => {
+    try {
+        console.log("代理网络请求:", message.data);
+        const requestData = message.data;
+        if (!requestData || typeof requestData !== "object") {
+            throw new Error("请求数据无效");
+        }
+        const { method, url, data, headers } = requestData;
+        if (!method || !url) {
+            throw new Error("方法或URL参数缺失");
+        }
+        // 使用 Node.js 的 https/http 模块发送请求
+        const https = __webpack_require__(49);
+        const http = __webpack_require__(50);
+        const urlLib = __webpack_require__(51);
+        const parsedUrl = urlLib.parse(url);
+        const isHttps = parsedUrl.protocol === "https:";
+        const requestLib = isHttps ? https : http;
+        // 构建请求选项
+        const options = {
+            hostname: parsedUrl.hostname,
+            port: parsedUrl.port || (isHttps ? 443 : 80),
+            path: parsedUrl.path,
+            method: String(method).toUpperCase(),
+            headers: {
+                "Content-Type": "application/json",
+                "User-Agent": "DIFlow-VSCode-Extension/1.0.0",
+                ...(headers || {}),
+            },
+            // 忽略 SSL 证书验证（仅用于开发）
+            rejectUnauthorized: false,
+        };
+        console.log("代理请求选项:", options);
+        // 发送请求
+        const result = await new Promise((resolve, reject) => {
+            const req = requestLib.request(options, (res) => {
+                let responseData = "";
+                res.on("data", (chunk) => {
+                    responseData += chunk;
+                });
+                res.on("end", () => {
+                    try {
+                        console.log("原始响应数据:", responseData);
+                        const parsedData = responseData ? JSON.parse(responseData) : {};
+                        resolve({
+                            success: true,
+                            status: res.statusCode,
+                            data: parsedData,
+                            headers: res.headers,
+                        });
+                    }
+                    catch (parseError) {
+                        console.log("JSON解析失败，返回原始数据:", parseError);
+                        resolve({
+                            success: true,
+                            status: res.statusCode,
+                            data: responseData,
+                            headers: res.headers,
+                        });
+                    }
+                });
+            });
+            req.on("error", (error) => {
+                console.error("代理请求错误:", error);
+                reject({
+                    success: false,
+                    message: `网络请求失败: ${error.message}`,
+                    error: error,
+                });
+            });
+            req.setTimeout(10000, () => {
+                req.destroy();
+                reject({
+                    success: false,
+                    message: "请求超时",
+                    error: new Error("Request timeout"),
+                });
+            });
+            // 发送请求体数据
+            if (data &&
+                (String(method).toUpperCase() === "POST" ||
+                    String(method).toUpperCase() === "PUT")) {
+                const jsonData = JSON.stringify(data);
+                console.log("发送请求体数据:", jsonData);
+                req.write(jsonData);
+            }
+            req.end();
+        });
+        console.log("代理请求成功:", result);
+        // 发送结果回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: result,
+            });
+        }
+    }
+    catch (error) {
+        console.error("proxyRequest task failed:", error);
+        // 发送错误回 webview
+        const panels = webviewPanelList.filter((panel) => panel.key === "cursor" || panel.key === "main");
+        if (panels.length > 0 && message.cbid) {
+            panels[0].panel.webview.postMessage({
+                cbid: message.cbid,
+                data: {
+                    success: false,
+                    message: error instanceof Error ? error.message : "网络请求失败",
+                    error: error,
+                },
+            });
+        }
+    }
+};
+
+
+/***/ }),
+/* 45 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.addSnippets = void 0;
+const vscode = __webpack_require__(2);
+const path = __webpack_require__(3);
+const addSnippets = (context, message) => {
+    // 获取当前项目下的路径
+    const rootPath = vscode.workspace.rootPath;
+    const extensionPath = path.join(rootPath, ".vscode/test.code-snippets");
+    const snippetFilePath = vscode.Uri.file(extensionPath);
+    // 创建代码片段
+    const newSnippet = {
+        [message.data.tips]: {
+            prefix: message.data?.prefix,
+            body: [message.data?.body],
+            description: message.data?.description,
+        },
+    };
+    // 将代码片段写入文件并添加到扩展程序
+    const writesnippetFilePath = async () => {
+        try {
+            let existingSnippets = {};
+            // 保证一定有该文件
+            try {
+                const folderStat = await vscode.workspace.fs.stat(snippetFilePath);
+                if (folderStat.type !== vscode.FileType.File) {
+                    await vscode.workspace.fs.writeFile(snippetFilePath, Buffer.from("", "utf8"));
+                }
+            }
+            catch (error) {
+                await vscode.workspace.fs.writeFile(snippetFilePath, Buffer.from("", "utf8"));
+            }
+            // 读取原有文件内容
+            const snippetsFileContent = await vscode.workspace.fs.readFile(snippetFilePath);
+            if (snippetsFileContent && snippetsFileContent.toString())
+                existingSnippets = JSON.parse(snippetsFileContent.toString());
+            // 如果不存在重复代码片段则拼接
+            if (!existingSnippets[newSnippet[message.data.tips].prefix]) {
+                existingSnippets = { ...existingSnippets, ...newSnippet };
+            }
+            else {
+                existingSnippets = newSnippet;
+            }
+            const updatedSnippetsContent = JSON.stringify(existingSnippets, null, 2);
+            // 写入
+            await vscode.workspace.fs.writeFile(snippetFilePath, Buffer.from(updatedSnippetsContent, "utf-8"));
+            vscode.window.showInformationMessage("代码片段添加成功!");
+        }
+        catch (error) {
+            vscode.window.showErrorMessage(`代码片段添加失败: ${error}`);
+        }
+    };
+    writesnippetFilePath();
+};
+exports.addSnippets = addSnippets;
+
+
+/***/ }),
+/* 46 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.registerCursorManagement = exports.registerCursorIntegration = exports.CursorIntegration = void 0;
+const fs = __webpack_require__(8);
+const path = __webpack_require__(3);
+const os = __webpack_require__(47);
+const vscode_1 = __webpack_require__(2);
+const webviewUtils_1 = __webpack_require__(44);
+/**
+ * Cursor 集成类 - 动态配置版本
+ */
+class CursorIntegration {
+    constructor() {
+        this.configPaths = {};
+        this.platform = os.platform();
+        this.detectConfigPaths();
+    }
+    /**
+     * 设置用户自定义 Cursor 安装路径
+     */
+    setCustomInstallPath(customPath) {
+        console.log("设置自定义 Cursor 安装路径:", customPath);
+        this.configPaths.customInstallPath = customPath;
+        // 重新检测配置路径
+        this.detectConfigPaths();
+    }
+    /**
+     * 动态检测所有配置路径
+     */
+    detectConfigPaths() {
+        console.log("开始动态检测 Cursor 配置路径...");
+        // 检测 settings.json 路径
+        this.configPaths.settingsPath = this.findSettingsPath();
+        // 检测 MCP 配置路径
+        this.configPaths.mcpPath = this.findMcpPath();
+        // 检测 .cursorrules 路径
+        this.configPaths.rulesPath = this.findRulesPath();
+        // 检测 CLI 路径
+        this.configPaths.cliPath = this.findCliPath();
+        console.log("配置路径检测结果:", this.configPaths);
+    }
+    /**
+     * 查找 Cursor settings.json 文件
+     */
+    findSettingsPath() {
+        const homeDir = os.homedir();
+        const possiblePaths = [];
+        if (this.platform === "win32") {
+            possiblePaths.push(path.join(homeDir, "AppData", "Roaming", "Cursor", "User", "settings.json"), path.join(homeDir, "AppData", "Local", "Cursor", "User", "settings.json"));
+        }
+        else if (this.platform === "darwin") {
+            // macOS 路径 - 确保使用正确的路径
+            const macOSPath = path.join(homeDir, "Library", "Application Support", "Cursor", "User", "settings.json");
+            possiblePaths.push(macOSPath);
+            console.log("macOS 配置文件路径:", macOSPath);
+        }
+        else {
+            possiblePaths.push(path.join(homeDir, ".config", "Cursor", "User", "settings.json"), path.join(homeDir, ".cursor", "settings.json"));
+        }
+        for (const settingsPath of possiblePaths) {
+            console.log("检查配置文件路径:", settingsPath);
+            if (fs.existsSync(settingsPath)) {
+                console.log("找到 settings.json:", settingsPath);
+                return settingsPath;
+            }
+        }
+        console.log("未找到 settings.json 文件，检查的路径:", possiblePaths);
+        return undefined;
+    }
+    /**
+     * 查找 MCP 配置文件
+     */
+    findMcpPath() {
+        const homeDir = os.homedir();
+        // Cursor MCP 配置文件的正确路径
+        const cursorMcpPath = path.join(homeDir, ".cursor", "mcp.json");
+        console.log("检查 Cursor MCP 配置路径:", cursorMcpPath);
+        if (fs.existsSync(cursorMcpPath)) {
+            console.log("找到 Cursor MCP 配置文件:", cursorMcpPath);
+            return cursorMcpPath;
+        }
+        // 备用路径：检查用户目录下的其他可能位置
+        const alternativePaths = [
+            // 用户目录下的 mcp.json
+            path.join(homeDir, "mcp.json"),
+            // VS Code 用户目录下的 mcp.json
+            path.join(homeDir, "Library", "Application Support", "Cursor", "User", "mcp.json"),
+            path.join(homeDir, "AppData", "Roaming", "Cursor", "User", "mcp.json"),
+            path.join(homeDir, ".config", "Cursor", "User", "mcp.json"),
+        ];
+        console.log("检查备用 MCP 配置路径:", alternativePaths);
+        for (const mcpPath of alternativePaths) {
+            console.log("检查备用 MCP 路径:", mcpPath);
+            if (fs.existsSync(mcpPath)) {
+                console.log("找到备用 MCP 配置文件:", mcpPath);
+                return mcpPath;
+            }
+        }
+        // 如果没有找到现有文件，返回默认的 ~/.cursor/mcp.json 路径
+        console.log("使用默认 MCP 配置路径:", cursorMcpPath);
+        return cursorMcpPath;
+    }
+    /**
+     * 查找 .cursorrules 文件
+     */
+    findRulesPath() {
+        // 优先查找当前工作区的 .cursorrules
+        const workspaceRules = path.join(process.cwd(), ".cursorrules");
+        if (fs.existsSync(workspaceRules)) {
+            console.log("找到工作区 .cursorrules:", workspaceRules);
+            return workspaceRules;
+        }
+        // 查找用户主目录的 .cursorrules
+        const homeRules = path.join(os.homedir(), ".cursorrules");
+        if (fs.existsSync(homeRules)) {
+            console.log("找到用户主目录 .cursorrules:", homeRules);
+            return homeRules;
+        }
+        // 返回工作区路径作为默认值
+        console.log("使用默认 .cursorrules 路径:", workspaceRules);
+        return workspaceRules;
+    }
+    /**
+     * 查找 Cursor CLI 工具
+     */
+    findCliPath() {
+        try {
+            const { execSync } = __webpack_require__(48);
+            // 如果用户设置了自定义路径，优先使用
+            if (this.configPaths.customInstallPath) {
+                const customCliPaths = this.getCliPathsFromInstallDir(this.configPaths.customInstallPath);
+                for (const cliPath of customCliPaths) {
+                    if (fs.existsSync(cliPath)) {
+                        console.log("找到自定义路径 CLI:", cliPath);
+                        return cliPath;
+                    }
+                }
+            }
+            // 首先尝试 which/where 命令
+            try {
+                const whichCommand = this.platform === "win32" ? "where cursor" : "which cursor";
+                const result = execSync(whichCommand, {
+                    encoding: "utf8",
+                    timeout: 3000,
+                });
+                const cliPath = result.trim().split("\n")[0];
+                if (cliPath && fs.existsSync(cliPath)) {
+                    console.log("通过 which/where 找到 CLI:", cliPath);
+                    return cliPath;
+                }
+            }
+            catch (error) {
+                console.log("which/where 命令未找到 cursor");
+            }
+            // 平台特定的查找逻辑
+            if (this.platform === "darwin") {
+                return this.findCliMacOS();
+            }
+            else if (this.platform === "win32") {
+                return this.findCliWindows();
+            }
+            else {
+                return this.findCliLinux();
+            }
+        }
+        catch (error) {
+            console.error("查找 CLI 工具时出错:", error);
+            return undefined; // 不要返回 "cursor"，因为可能不存在
+        }
+    }
+    /**
+     * 从安装目录获取可能的 CLI 路径
+     */
+    getCliPathsFromInstallDir(installDir) {
+        const paths = [];
+        if (this.platform === "darwin") {
+            // macOS 应用结构
+            if (installDir.endsWith(".app")) {
+                paths.push(path.join(installDir, "Contents", "Resources", "app", "bin", "cursor"), path.join(installDir, "Contents", "MacOS", "Cursor"), path.join(installDir, "Contents", "Resources", "cursor"));
+            }
+            else {
+                // 可能是直接指向 CLI 的路径
+                paths.push(installDir);
+            }
+        }
+        else if (this.platform === "win32") {
+            // Windows 结构
+            if (installDir.endsWith(".exe")) {
+                paths.push(installDir);
+            }
+            else {
+                paths.push(path.join(installDir, "Cursor.exe"), path.join(installDir, "cursor.exe"));
+            }
+        }
+        else {
+            // Linux 结构
+            paths.push(installDir, path.join(installDir, "cursor"));
+        }
+        return paths;
+    }
+    /**
+     * macOS 下查找 CLI
+     */
+    findCliMacOS() {
+        try {
+            const { execSync } = __webpack_require__(48);
+            // 1. 定义所有需要搜索的应用路径
+            const appSearchPaths = [
+                "/Applications/Cursor.app",
+                path.join(os.homedir(), "Applications", "Cursor.app"),
+            ];
+            // 2. 使用 mdfind 扩展搜索范围
+            try {
+                console.log("使用 mdfind 搜索 Cursor 应用...");
+                const mdfindResult = execSync('mdfind "kMDItemCFBundleIdentifier == com.todesktop.230313mzl4w4u92" 2>/dev/null', { encoding: "utf8", timeout: 5000 }).trim();
+                if (mdfindResult) {
+                    appSearchPaths.push(...mdfindResult.split("\n"));
+                }
+            }
+            catch (e) {
+                console.log("mdfind 查找失败，将继续使用常规路径搜索...");
+            }
+            // 3. 去重并遍历所有可能的应用路径
+            const uniqueAppPaths = [...new Set(appSearchPaths)].filter(Boolean); // 过滤空路径
+            console.log("正在搜索以下应用路径:", uniqueAppPaths);
+            for (const appPath of uniqueAppPaths) {
+                if (appPath && fs.existsSync(appPath)) {
+                    console.log("找到潜在的 Cursor 应用:", appPath);
+                    // 定义 CLI 工具在 .app 包内的相对路径
+                    const cliPath = path.join(appPath, "Contents", "Resources", "app", "bin", "cursor");
+                    if (fs.existsSync(cliPath)) {
+                        console.log("成功找到 macOS CLI:", cliPath);
+                        return cliPath; // **重要: 只返回可执行的 CLI 路径**
+                    }
+                }
+            }
+        }
+        catch (error) {
+            console.error("macOS CLI 查找出错:", error);
+        }
+        console.log("在 macOS 上未找到任何可执行的 Cursor CLI 工具。");
+        return undefined;
+    }
+    /**
+     * Windows 下查找 CLI
+     */
+    findCliWindows() {
+        const possiblePaths = [
+            path.join(os.homedir(), "AppData", "Local", "Programs", "cursor", "Cursor.exe"),
+            path.join("C:", "Program Files", "Cursor", "Cursor.exe"),
+            path.join("C:", "Program Files (x86)", "Cursor", "Cursor.exe"),
+        ];
+        for (const cliPath of possiblePaths) {
+            if (fs.existsSync(cliPath)) {
+                console.log("找到 Windows CLI:", cliPath);
+                return cliPath;
+            }
+        }
+        return undefined;
+    }
+    /**
+     * Linux 下查找 CLI
+     */
+    findCliLinux() {
+        const possiblePaths = [
+            "/usr/bin/cursor",
+            "/usr/local/bin/cursor",
+            path.join(os.homedir(), ".local", "bin", "cursor"),
+            "/opt/cursor/cursor",
+            "/snap/bin/cursor",
+        ];
+        for (const cliPath of possiblePaths) {
+            if (fs.existsSync(cliPath)) {
+                console.log("找到 Linux CLI:", cliPath);
+                return cliPath;
+            }
+        }
+        return undefined;
+    }
+    /**
+     * 检查 Cursor 是否已安装
+     */
+    async isCursorInstalled() {
+        try {
+            console.log("=== Cursor 安装检测开始 ===");
+            this.detectConfigPaths(); // 确保所有路径都是最新的
+            // 强制检测步骤: 基于实际测试的路径直接检查
+            console.log("=== 强制检测步骤 ===");
+            const forceCheckPaths = {
+                app: "/Applications/Cursor.app",
+                cli: "/Applications/Cursor.app/Contents/Resources/app/bin/cursor",
+                settings: path.join(os.homedir(), "Library", "Application Support", "Cursor", "User", "settings.json"),
+            };
+            let forceDetected = false;
+            console.log("强制检测路径:", forceCheckPaths);
+            // 检查应用是否存在
+            if (fs.existsSync(forceCheckPaths.app)) {
+                console.log("✅ 强制检测: 找到 Cursor 应用");
+                forceDetected = true;
+            }
+            // 检查 CLI 是否存在
+            if (fs.existsSync(forceCheckPaths.cli)) {
+                console.log("✅ 强制检测: 找到 Cursor CLI");
+                this.configPaths.cliPath = forceCheckPaths.cli; // 强制设置 CLI 路径
+                forceDetected = true;
+            }
+            // 检查配置文件是否存在
+            if (fs.existsSync(forceCheckPaths.settings)) {
+                console.log("✅ 强制检测: 找到 Cursor 配置文件");
+                this.configPaths.settingsPath = forceCheckPaths.settings; // 强制设置配置路径
+                forceDetected = true;
+            }
+            if (forceDetected) {
+                console.log("=== 强制检测成功，Cursor 已安装 ===");
+                return true;
+            }
+            // 检查 1: 是否找到了 CLI 工具
+            if (this.configPaths.cliPath && fs.existsSync(this.configPaths.cliPath)) {
+                console.log(`检测成功: 找到 CLI 工具路径 '${this.configPaths.cliPath}'`);
+                return true;
+            }
+            console.log("检测信息: 未能通过 CLI 路径直接确认安装。");
+            // 检查 2: 是否找到了关键配置文件
+            if (this.configPaths.settingsPath &&
+                fs.existsSync(this.configPaths.settingsPath)) {
+                console.log(`检测成功: 找到配置文件路径 '${this.configPaths.settingsPath}'`);
+                return true;
+            }
+            console.log("检测信息: 未能通过配置文件确认安装。");
+            // 检查 3: 检查应用安装情况（作为后备方案）
+            if (this.checkAppInstallation()) {
+                console.log("检测成功: 找到了应用安装目录 (但未找到明确的 CLI 或配置文件)。");
+                return true;
+            }
+            console.log("检测信息: 未能通过应用目录确认安装。");
+            // 检查 4: 尝试在 PATH 中执行 `cursor --version`
+            try {
+                const { execSync } = __webpack_require__(48);
+                execSync("cursor --version", { timeout: 3000, stdio: "ignore" });
+                console.log("检测成功: `cursor --version` 命令执行成功。");
+                return true;
+            }
+            catch (error) {
+                console.log(`检测信息: 'cursor --version' 命令执行失败: ${error.message}`);
+            }
+            console.log("=== Cursor 未检测到 ===");
+            return false;
+        }
+        catch (error) {
+            console.error("检测 Cursor 安装状态时发生意外错误:", error);
+            return false;
+        }
+    }
+    /**
+     * 检查应用安装情况
+     */
+    checkAppInstallation() {
+        try {
+            if (this.platform === "darwin") {
+                // macOS: 检查 Applications 目录
+                const appPaths = [
+                    "/Applications/Cursor.app",
+                    path.join(os.homedir(), "Applications", "Cursor.app"),
+                ];
+                for (const appPath of appPaths) {
+                    if (fs.existsSync(appPath)) {
+                        console.log("找到 Cursor 应用:", appPath);
+                        return true;
+                    }
+                }
+            }
+            else if (this.platform === "win32") {
+                // Windows: 检查常见安装位置
+                const appPaths = [
+                    path.join(os.homedir(), "AppData", "Local", "Programs", "cursor"),
+                    path.join("C:", "Program Files", "Cursor"),
+                    path.join("C:", "Program Files (x86)", "Cursor"),
+                ];
+                for (const appPath of appPaths) {
+                    if (fs.existsSync(appPath)) {
+                        console.log("找到 Cursor 安装目录:", appPath);
+                        return true;
+                    }
+                }
+            }
+            else {
+                // Linux: 检查常见位置
+                const appPaths = [
+                    "/opt/cursor",
+                    "/usr/local/bin/cursor",
+                    "/usr/bin/cursor",
+                    path.join(os.homedir(), ".local", "bin", "cursor"),
+                ];
+                for (const appPath of appPaths) {
+                    if (fs.existsSync(appPath)) {
+                        console.log("找到 Cursor 安装:", appPath);
+                        return true;
+                    }
+                }
+            }
+        }
+        catch (error) {
+            console.error("检查应用安装时出错:", error);
+        }
+        return false;
+    }
+    /**
+     * 获取 Cursor 设置
+     */
+    async getCursorSettings() {
+        const settings = {};
+        try {
+            // 读取 .cursorrules 文件
+            if (this.configPaths.rulesPath &&
+                fs.existsSync(this.configPaths.rulesPath)) {
+                settings.rules = fs.readFileSync(this.configPaths.rulesPath, "utf-8");
+            }
+            else {
+                settings.rules = "";
+            }
+            // 读取主配置文件
+            if (this.configPaths.settingsPath &&
+                fs.existsSync(this.configPaths.settingsPath)) {
+                const configContent = fs.readFileSync(this.configPaths.settingsPath, "utf-8");
+                try {
+                    settings.generalConfig = JSON.parse(configContent);
+                }
+                catch (parseError) {
+                    console.warn("解析 settings.json 失败:", parseError);
+                    settings.generalConfig = {};
+                }
+            }
+            else {
+                settings.generalConfig = {};
+            }
+            // 读取 MCP 配置文件
+            if (this.configPaths.mcpPath && fs.existsSync(this.configPaths.mcpPath)) {
+                const mcpContent = fs.readFileSync(this.configPaths.mcpPath, "utf-8");
+                try {
+                    settings.mcpConfig = JSON.parse(mcpContent);
+                }
+                catch (parseError) {
+                    console.warn("解析 MCP 配置失败:", parseError);
+                    settings.mcpConfig = { mcpServers: {} };
+                }
+            }
+            else {
+                settings.mcpConfig = { mcpServers: {} };
+            }
+        }
+        catch (error) {
+            console.error("获取 Cursor 设置失败:", error);
+            throw new Error(`获取 Cursor 设置失败: ${error}`);
+        }
+        return settings;
+    }
+    /**
+     * 更新 Cursor 设置
+     */
+    async updateCursorSettings(settings) {
+        try {
+            // 更新 .cursorrules 文件
+            if (settings.rules !== undefined && this.configPaths.rulesPath) {
+                // 确保目录存在
+                const rulesDir = path.dirname(this.configPaths.rulesPath);
+                if (!fs.existsSync(rulesDir)) {
+                    fs.mkdirSync(rulesDir, { recursive: true });
+                }
+                fs.writeFileSync(this.configPaths.rulesPath, settings.rules, "utf-8");
+            }
+            // 更新主配置文件
+            if (settings.generalConfig !== undefined &&
+                this.configPaths.settingsPath) {
+                const configDir = path.dirname(this.configPaths.settingsPath);
+                if (!fs.existsSync(configDir)) {
+                    fs.mkdirSync(configDir, { recursive: true });
+                }
+                let existingConfig = {};
+                if (fs.existsSync(this.configPaths.settingsPath)) {
+                    try {
+                        const configContent = fs.readFileSync(this.configPaths.settingsPath, "utf-8");
+                        existingConfig = JSON.parse(configContent);
+                    }
+                    catch (parseError) {
+                        console.warn("解析现有 settings.json 失败，将创建新配置:", parseError);
+                    }
+                }
+                const mergedConfig = { ...existingConfig, ...settings.generalConfig };
+                fs.writeFileSync(this.configPaths.settingsPath, JSON.stringify(mergedConfig, null, 2), "utf-8");
+            }
+            // 更新 MCP 配置文件
+            if (settings.mcpConfig !== undefined && this.configPaths.mcpPath) {
+                const mcpDir = path.dirname(this.configPaths.mcpPath);
+                if (!fs.existsSync(mcpDir)) {
+                    fs.mkdirSync(mcpDir, { recursive: true });
+                }
+                let existingMcpConfig = { mcpServers: {} };
+                if (fs.existsSync(this.configPaths.mcpPath)) {
+                    try {
+                        const mcpContent = fs.readFileSync(this.configPaths.mcpPath, "utf-8");
+                        existingMcpConfig = JSON.parse(mcpContent);
+                    }
+                    catch (parseError) {
+                        console.warn("解析现有 MCP 配置失败，将创建新配置:", parseError);
+                    }
+                }
+                const mergedMcpConfig = {
+                    ...existingMcpConfig,
+                    ...settings.mcpConfig,
+                    mcpServers: {
+                        ...existingMcpConfig.mcpServers,
+                        ...settings.mcpConfig.mcpServers,
+                    },
+                };
+                fs.writeFileSync(this.configPaths.mcpPath, JSON.stringify(mergedMcpConfig, null, 2), "utf-8");
+            }
+            return true;
+        }
+        catch (error) {
+            console.error("更新 Cursor 设置失败:", error);
+            throw new Error(`更新 Cursor 设置失败: ${error}`);
+        }
+    }
+    /**
+     * 打开 Cursor 应用程序
+     */
+    async openCursor(filePath) {
+        try {
+            const { exec } = __webpack_require__(48);
+            let command;
+            if (this.platform === "darwin") {
+                if (filePath) {
+                    command = `open -a "Cursor" "${filePath}"`;
+                }
+                else {
+                    command = `open -a "Cursor" --new`;
+                }
+            }
+            else {
+                const cliPath = this.configPaths.cliPath || "cursor";
+                command = `"${cliPath}"`;
+                if (filePath) {
+                    command += ` "${filePath}"`;
+                }
+                else {
+                    command += " --new-window";
+                }
+            }
+            console.log("执行命令:", command);
+            return new Promise((resolve, reject) => {
+                exec(command, (error, stdout, stderr) => {
+                    if (error) {
+                        console.error("打开 Cursor 失败:", error);
+                        reject(new Error(`打开 Cursor 失败: ${error.message}`));
+                    }
+                    else {
+                        console.log("Cursor 打开成功");
+                        resolve(true);
+                    }
+                });
+            });
+        }
+        catch (error) {
+            console.error("打开 Cursor 失败:", error);
+            throw new Error(`打开 Cursor 失败: ${error}`);
+        }
+    }
+    /**
+     * 打开 Cursor Chat 并发送消息 - 使用 VS Code 标准 API
+     */
+    async openCursorChat(message) {
+        try {
+            console.log("尝试打开 Cursor Chat...");
+            // 方法1: 尝试使用 Cursor 特有的聊天命令
+            const cursorChatCommands = [
+                "aichat.newchat",
+                "aichat.newchataction",
+                "workbench.action.chat.open",
+                "workbench.action.chat.newChat",
+                "workbench.panel.chat.view.copilot.focus",
+                "workbench.action.openChat",
+                "cursor.chat.focus",
+                "cursor.chat.new",
+            ];
+            for (const command of cursorChatCommands) {
+                try {
+                    console.log(`尝试执行命令: ${command}`);
+                    if (message) {
+                        // 如果有消息，尝试带参数执行
+                        await vscode_1.commands.executeCommand(command, { query: message });
+                    }
+                    else {
+                        // 只是打开聊天
+                        await vscode_1.commands.executeCommand(command);
+                    }
+                    console.log(`成功执行命令: ${command}`);
+                    // 如果有消息且命令执行成功，尝试输入消息
+                    if (message) {
+                        await new Promise((resolve) => setTimeout(resolve, 800)); // 等待界面加载
+                        try {
+                            // 尝试直接输入文本
+                            await vscode_1.commands.executeCommand("type", { text: message });
+                            await new Promise((resolve) => setTimeout(resolve, 200));
+                            // 尝试发送消息（回车）
+                            await vscode_1.commands.executeCommand("workbench.action.acceptSelectedSuggestion");
+                            console.log("成功发送消息到聊天");
+                        }
+                        catch (typeError) {
+                            console.log("直接输入失败，消息已复制到剪贴板");
+                            await this.copyToClipboard(message);
+                        }
+                    }
+                    return true;
+                }
+                catch (error) {
+                    console.log(`命令 ${command} 执行失败:`, error);
+                }
+            }
+            // 方法2: 如果所有命令都失败，尝试使用快捷键
+            try {
+                console.log("尝试使用快捷键打开聊天...");
+                await vscode_1.commands.executeCommand("workbench.action.quickOpen");
+                await new Promise((resolve) => setTimeout(resolve, 300));
+                await vscode_1.commands.executeCommand("type", { text: ">chat" });
+                await new Promise((resolve) => setTimeout(resolve, 200));
+                await vscode_1.commands.executeCommand("workbench.action.acceptSelectedSuggestion");
+                if (message) {
+                    await new Promise((resolve) => setTimeout(resolve, 500));
+                    await this.copyToClipboard(message);
+                    console.log("聊天界面已打开，消息已复制到剪贴板");
+                }
+                return true;
+            }
+            catch (shortcutError) {
+                console.log("快捷键方法失败:", shortcutError);
+            }
+            // 方法3: 最后的备选方案 - 复制消息到剪贴板并提示用户
+            if (message) {
+                await this.copyToClipboard(message);
+                console.log("所有自动打开方法都失败了，消息已复制到剪贴板，请手动打开聊天界面并粘贴");
+                // 尝试显示通知
+                try {
+                    const vscode = __webpack_require__(2);
+                    vscode.window.showInformationMessage("消息已复制到剪贴板，请手动打开 Cursor Chat 并粘贴", "确定");
+                }
+                catch (notificationError) {
+                    console.log("无法显示通知:", notificationError);
+                }
+                return true;
+            }
+            console.log("无法打开 Cursor Chat");
+            return false;
+        }
+        catch (error) {
+            console.error("打开 Cursor Chat 失败:", error);
+            // 如果有消息，至少复制到剪贴板
+            if (message) {
+                try {
+                    await this.copyToClipboard(message);
+                    console.log("发生错误，但消息已复制到剪贴板");
+                    return true;
+                }
+                catch (clipboardError) {
+                    console.error("复制到剪贴板也失败了:", clipboardError);
+                }
+            }
+            throw error;
+        }
+    }
+    /**
+     * 复制文本到剪贴板
+     */
+    async copyToClipboard(text) {
+        try {
+            const { exec } = __webpack_require__(48);
+            const escapedText = text.replace(/'/g, "'\"'\"'");
+            let command;
+            if (this.platform === "darwin") {
+                command = `echo '${escapedText}' | pbcopy`;
+            }
+            else if (this.platform === "win32") {
+                command = `echo ${escapedText} | clip`;
+            }
+            else {
+                command = `echo '${escapedText}' | xclip -selection clipboard`;
+            }
+            await new Promise((resolve, reject) => {
+                exec(command, (error) => {
+                    if (error) {
+                        reject(error);
+                    }
+                    else {
+                        resolve();
+                    }
+                });
+            });
+            console.log("文本已复制到剪贴板");
+        }
+        catch (error) {
+            console.error("复制到剪贴板失败:", error);
+            throw error;
+        }
+    }
+    /**
+     * 获取 MCP 服务器列表
+     */
+    async getMcpServers() {
+        try {
+            // 确保配置路径是最新的
+            this.detectConfigPaths();
+            const mcpPath = this.configPaths.mcpPath;
+            console.log("获取 MCP 服务器 - 使用路径:", mcpPath);
+            if (!mcpPath || !fs.existsSync(mcpPath)) {
+                console.log("MCP configuration file not found:", mcpPath);
+                return {};
+            }
+            const content = fs.readFileSync(mcpPath, "utf8");
+            const config = JSON.parse(content);
+            console.log("MCP 配置内容:", config);
+            // 确保返回正确的 MCP 服务器配置
+            if (config.mcpServers) {
+                return config.mcpServers;
+            }
+            // 如果没有 mcpServers 字段，返回空对象
+            return {};
+        }
+        catch (error) {
+            console.error("Error reading MCP configuration:", error);
+            return {};
+        }
+    }
+    /**
+     * 添加 MCP 服务器
+     */
+    async addMcpServer(name, config) {
+        try {
+            const settings = await this.getCursorSettings();
+            if (!settings.mcpConfig) {
+                settings.mcpConfig = { mcpServers: {} };
+            }
+            if (!settings.mcpConfig.mcpServers) {
+                settings.mcpConfig.mcpServers = {};
+            }
+            settings.mcpConfig.mcpServers[name] = config;
+            return await this.updateCursorSettings({ mcpConfig: settings.mcpConfig });
+        }
+        catch (error) {
+            console.error("添加 MCP 服务器失败:", error);
+            throw error;
+        }
+    }
+    /**
+     * 删除 MCP 服务器
+     */
+    async removeMcpServer(name) {
+        try {
+            const settings = await this.getCursorSettings();
+            if (settings.mcpConfig?.mcpServers?.[name]) {
+                delete settings.mcpConfig.mcpServers[name];
+                if (this.configPaths.mcpPath) {
+                    const mcpDir = path.dirname(this.configPaths.mcpPath);
+                    if (!fs.existsSync(mcpDir)) {
+                        fs.mkdirSync(mcpDir, { recursive: true });
+                    }
+                    fs.writeFileSync(this.configPaths.mcpPath, JSON.stringify(settings.mcpConfig, null, 2), "utf-8");
+                }
+                console.log(`MCP 服务器 ${name} 已删除`);
+                return true;
+            }
+            else {
+                console.log(`MCP 服务器 ${name} 不存在`);
+                return true;
+            }
+        }
+        catch (error) {
+            console.error("删除 MCP 服务器失败:", error);
+            throw error;
+        }
+    }
+    /**
+     * 获取用户规则
+     */
+    async getUserRules() {
+        try {
+            const rulesPath = this.findRulesPath();
+            if (!rulesPath || !fs.existsSync(rulesPath)) {
+                console.log("Rules file not found:", rulesPath);
+                return "";
+            }
+            const content = fs.readFileSync(rulesPath, "utf8");
+            console.log("读取到的规则内容:", content);
+            return content;
+        }
+        catch (error) {
+            console.error("Error reading user rules:", error);
+            return "";
+        }
+    }
+    /**
+     * 更新用户规则
+     */
+    async updateUserRules(rules) {
+        try {
+            const rulesPath = this.findRulesPath();
+            if (!rulesPath) {
+                console.error("Rules path not found");
+                return false;
+            }
+            // 确保目录存在
+            const rulesDir = path.dirname(rulesPath);
+            if (!fs.existsSync(rulesDir)) {
+                fs.mkdirSync(rulesDir, { recursive: true });
+            }
+            // 保存为纯文本格式
+            fs.writeFileSync(rulesPath, rules, "utf8");
+            console.log("规则已保存到:", rulesPath);
+            return true;
+        }
+        catch (error) {
+            console.error("Error updating user rules:", error);
+            return false;
+        }
+    }
+    /**
+     * 获取 Cursor 用户信息 - 改进版本，从 SQLite 数据库读取
+     */
+    async getCursorUserInfo() {
+        try {
+            console.log("=== 开始获取 Cursor 用户信息 ===");
+            // 重新检测配置路径
+            this.detectConfigPaths();
+            // 构建 SQLite 数据库路径
+            let dbPath;
+            if (this.platform === "darwin") {
+                dbPath = path.join(os.homedir(), "Library/Application Support/Cursor/User/globalStorage/state.vscdb");
+            }
+            else if (this.platform === "win32") {
+                dbPath = path.join(os.homedir(), "AppData/Roaming/Cursor/User/globalStorage/state.vscdb");
+            }
+            else {
+                // Linux
+                dbPath = path.join(os.homedir(), ".config/Cursor/User/globalStorage/state.vscdb");
+            }
+            console.log("SQLite 数据库路径:", dbPath);
+            // 检查数据库文件是否存在
+            if (!fs.existsSync(dbPath)) {
+                console.log("❌ Cursor SQLite 数据库不存在");
+                return { isLoggedIn: false };
+            }
+            console.log("✅ 找到 Cursor SQLite 数据库");
+            // 使用 sqlite3 命令行工具读取数据库
+            const { exec } = __webpack_require__(48);
+            const { promisify } = __webpack_require__(14);
+            const execAsync = promisify(exec);
+            try {
+                // 查询用户认证信息
+                const query = `
+          SELECT key, value 
+          FROM ItemTable 
+          WHERE key LIKE 'cursorAuth/%'
+        `;
+                const { stdout } = await execAsync(`sqlite3 "${dbPath}" "${query}"`, {
+                    encoding: "utf8",
+                });
+                console.log("数据库查询结果:", stdout);
+                // 解析查询结果
+                const lines = stdout.trim().split("\n");
+                const authData = {};
+                for (const line of lines) {
+                    if (line.includes("|")) {
+                        const [key, value] = line.split("|", 2);
+                        if (key && value) {
+                            authData[key] = value;
+                        }
+                    }
+                }
+                console.log("解析的认证数据:", authData);
+                // 提取用户信息
+                const email = authData["cursorAuth/cachedEmail"];
+                const membershipType = authData["cursorAuth/stripeMembershipType"];
+                const accessToken = authData["cursorAuth/accessToken"];
+                const refreshToken = authData["cursorAuth/refreshToken"];
+                // 检查是否有有效的认证信息
+                const isLoggedIn = !!(email && (accessToken || refreshToken));
+                console.log("=== 最终检测结果 ===");
+                console.log("邮箱:", email || "未找到");
+                console.log("会员类型:", membershipType || "未找到");
+                console.log("登录状态:", isLoggedIn);
+                return {
+                    isLoggedIn,
+                    email,
+                    username: email ? email.split("@")[0] : undefined, // 从邮箱提取用户名
+                    cursorUserId: email, // 暂时使用邮箱作为用户ID
+                    avatar: "", // 暂时为空
+                    membershipType,
+                    token: accessToken, // 使用访问令牌
+                };
+            }
+            catch (dbError) {
+                console.error("❌ 数据库查询失败:", dbError);
+                // 如果 SQLite 查询失败，尝试备用方法：直接读取 settings.json
+                console.log("=== 尝试备用方法：读取 settings.json ===");
+                return await this.getCursorUserInfoFromSettings();
+            }
+        }
+        catch (error) {
+            console.error("❌ 获取 Cursor 用户信息失败:", error);
+            return { isLoggedIn: false };
+        }
+    }
+    /**
+     * 从 settings.json 文件获取用户信息的备用方法
+     */
+    async getCursorUserInfoFromSettings() {
+        try {
+            console.log("使用备用方法从 settings.json 读取用户信息");
+            // 检查 Cursor 设置文件是否存在
+            if (!this.configPaths.settingsPath ||
+                !fs.existsSync(this.configPaths.settingsPath)) {
+                console.log("❌ Cursor 设置文件不存在");
+                return { isLoggedIn: false };
+            }
+            console.log("✅ 找到 Cursor 设置文件");
+            // 读取设置文件
+            const settingsContent = fs.readFileSync(this.configPaths.settingsPath, "utf-8");
+            console.log("设置文件内容长度:", settingsContent.length);
+            const settings = JSON.parse(settingsContent);
+            // 定义所有可能包含用户信息的字段
+            const emailFields = [
+                "cursor.account.email",
+                "account.email",
+                "cursor.pro.email",
+                "cursor.subscription.email",
+                "cursor.session.email",
+                "cursor.login.email",
+                "cursor.user.email",
+                "user.email",
+                "email",
+                "userEmail",
+                "loginEmail",
+                "accountEmail",
+            ];
+            const nameFields = [
+                "cursor.account.name",
+                "account.name",
+                "cursor.pro.name",
+                "cursor.subscription.name",
+                "cursor.session.name",
+                "cursor.login.name",
+                "cursor.user.name",
+                "user.name",
+                "name",
+                "userName",
+                "loginName",
+                "accountName",
+                "displayName",
+            ];
+            let email;
+            let name;
+            // 1. 直接字段搜索
+            for (const field of emailFields) {
+                if (settings[field] && typeof settings[field] === "string") {
+                    console.log(`✅ 在字段 '${field}' 找到邮箱:`, settings[field]);
+                    email = settings[field];
+                    break;
+                }
+            }
+            for (const field of nameFields) {
+                if (settings[field] && typeof settings[field] === "string") {
+                    console.log(`✅ 在字段 '${field}' 找到用户名:`, settings[field]);
+                    name = settings[field];
+                    break;
+                }
+            }
+            // 2. 深度搜索 - 查找任何包含 @ 符号的字段（可能是邮箱）
+            if (!email) {
+                console.log("=== 开始深度搜索邮箱 ===");
+                const deepSearch = (obj, path = "") => {
+                    for (const [key, value] of Object.entries(obj)) {
+                        const currentPath = path ? `${path}.${key}` : key;
+                        if (typeof value === "string" &&
+                            value.includes("@") &&
+                            value.includes(".")) {
+                            console.log(`✅ 深度搜索在 '${currentPath}' 找到可能的邮箱:`, value);
+                            return value;
+                        }
+                        else if (typeof value === "object" &&
+                            value !== null &&
+                            !Array.isArray(value)) {
+                            const result = deepSearch(value, currentPath);
+                            if (result)
+                                return result;
+                        }
+                    }
+                    return undefined;
+                };
+                email = deepSearch(settings);
+            }
+            console.log("=== 备用方法检测结果 ===");
+            console.log("邮箱:", email || "未找到");
+            console.log("用户名:", name || "未找到");
+            console.log("登录状态:", !!email);
+            return {
+                isLoggedIn: !!email,
+                email,
+                username: name,
+                cursorUserId: email,
+                avatar: "",
+                membershipType: "",
+                token: "",
+            };
+        }
+        catch (error) {
+            console.error("❌ 备用方法获取用户信息失败:", error);
+            return { isLoggedIn: false };
+        }
+    }
+    /**
+     * 检查 Cursor 是否已登录
+     */
+    async isCursorLoggedIn() {
+        const userInfo = await this.getCursorUserInfo();
+        return userInfo.isLoggedIn;
+    }
+    /**
+     * 获取系统信息
+     */
+    getSystemInfo() {
+        return {
+            platform: this.platform,
+            version: process.version, // Node.js 版本
+            isLoggedIn: false, // 这里应该检查登录状态，暂时设为false
+            cursorPath: this.configPaths.customInstallPath ||
+                this.configPaths.cliPath ||
+                "未找到",
+            configPath: this.configPaths.settingsPath || "未找到",
+            mcpPath: this.configPaths.mcpPath || "未找到",
+            rulesPath: this.configPaths.rulesPath || "未找到",
+            cliPath: this.configPaths.cliPath || "未找到",
+        };
+    }
+}
+exports.CursorIntegration = CursorIntegration;
+/**
+ * 注册 Cursor 集成相关的命令
+ */
+const registerCursorIntegration = (context) => {
+    // 注册获取 Cursor 设置命令
+    context.subscriptions.push(vscode_1.commands.registerCommand("DiFlow.getCursorSettings", async () => {
+        (0, webviewUtils_1.showWebView)(context, {
+            key: "main",
+            title: "Cursor 管理",
+            viewColumn: 1,
+            task: {
+                task: "route",
+                data: {
+                    path: "/cursor",
+                },
+            },
+        });
+    }));
+    // 注册更新 Cursor 设置命令
+    context.subscriptions.push(vscode_1.commands.registerCommand("DiFlow.updateCursorSettings", async () => {
+        (0, webviewUtils_1.showWebView)(context, {
+            key: "main",
+            title: "Cursor 管理",
+            viewColumn: 1,
+            task: {
+                task: "route",
+                data: {
+                    path: "/cursor",
+                },
+            },
+        });
+    }));
+    // 注册打开 Cursor 对话命令
+    context.subscriptions.push(vscode_1.commands.registerCommand("DiFlow.openCursorChat", async () => {
+        (0, webviewUtils_1.showWebView)(context, {
+            key: "main",
+            title: "Cursor 管理",
+            viewColumn: 1,
+            task: {
+                task: "route",
+                data: {
+                    path: "/cursor",
+                },
+            },
+        });
+    }));
+};
+exports.registerCursorIntegration = registerCursorIntegration;
+/**
+ * 注册 Cursor 管理命令 - 打开独立的 webview 窗口
+ */
+const registerCursorManagement = (context) => {
+    context.subscriptions.push(vscode_1.commands.registerCommand("DiFlow.cursorManagement", async () => {
+        (0, webviewUtils_1.showWebView)(context, {
+            key: "cursor",
+            title: "Cursor 管理",
+            viewColumn: 1,
+            task: {
+                task: "route",
+                data: {
+                    path: "/cursor",
+                },
+            },
+        });
+    }));
+};
+exports.registerCursorManagement = registerCursorManagement;
+
+
+/***/ }),
+/* 47 */
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("os");
+
+/***/ }),
+/* 48 */
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("child_process");
+
+/***/ }),
+/* 49 */
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("https");
+
+/***/ }),
+/* 50 */
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("http");
+
+/***/ }),
+/* 51 */
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("url");
+
+/***/ }),
+/* 52 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.registerCreateSetting = void 0;
+const vscode_1 = __webpack_require__(2);
+const registerCreateSetting = (context) => {
+    context.subscriptions.push(vscode_1.commands.registerCommand("DiFlow.openSetting", () => {
+        // 打开插件设置
+        vscode_1.commands.executeCommand("workbench.action.openSettings", "DiFlow");
+    }));
+};
+exports.registerCreateSetting = registerCreateSetting;
+
+
+/***/ }),
+/* 53 */
+/***/ ((__unused_webpack_module, exports, __webpack_require__) => {
+
+"use strict";
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.registerCreateChatGPTView = void 0;
+const vscode_1 = __webpack_require__(2);
+const webviewUtils_1 = __webpack_require__(44);
+// 创建一个 webview 视图
+let webviewViewProvider;
+// 实现 Webview 视图提供者接口，以下内容都是 chatGPT 提供
+class MyWebviewViewProvider {
+    constructor(context) {
+        this.context = context;
+        this.context = context;
+    }
+    resolveWebviewView(webviewView) {
+        this.webview = webviewView.webview;
+        // 设置 enableScripts 选项为 true
+        webviewView.webview.options = {
+            enableScripts: true,
+        };
+        // 设置 Webview 的内容
+        webviewView.webview.html = (0, webviewUtils_1.getHtmlForWebview)(this.context, webviewView.webview);
+        webviewView.webview.onDidReceiveMessage((message) => {
+            // 监听webview反馈回来加载完成，初始化主动推送消息
+            if (message.cmd === "webviewLoaded") {
+                console.log("反馈消息:", message);
+            }
+        });
+    }
+    // 销毁
+    removeWebView() {
+        this.webview = undefined;
+    }
+}
+const openChatGPTView = (selectedText) => {
+    // 唤醒 chatGPT 视图
+    vscode_1.commands.executeCommand("workbench.view.extension.DiFlow").then(() => {
+        vscode_1.commands
+            .executeCommand("setContext", "DiFlow.chatGPTView", true)
+            .then(() => {
+            const config = vscode_1.workspace.getConfiguration("DiFlow");
+            const hostname = config.get("hostname");
+            const apiKey = config.get("apiKey");
+            const model = config.get("model");
+            setTimeout(() => {
+                // 发送任务,并传递参数
+                if (!webviewViewProvider || !webviewViewProvider?.webview) {
+                    return;
+                }
+                webviewViewProvider.webview.postMessage({
+                    cmd: "vscodePushTask",
+                    task: "route",
+                    data: {
+                        path: "/chat-gpt-view",
+                        query: {
+                            hostname,
+                            apiKey,
+                            selectedText,
+                            model,
+                        },
+                    },
+                });
+            }, 500);
+        });
+    });
+};
+const registerCreateChatGPTView = (context) => {
+    // 注册 webview 视图
+    webviewViewProvider = new MyWebviewViewProvider(context);
+    context.subscriptions.push(vscode_1.window.registerWebviewViewProvider("DiFlow.chatGPTView", webviewViewProvider, {
+        webviewOptions: {
+            retainContextWhenHidden: true,
+        },
+    }));
+    context.subscriptions.push(
+    // 添加打开视图
+    vscode_1.commands.registerCommand("DiFlow.openChatGPTView", () => {
+        openChatGPTView();
+    }), 
+    // 添加关闭视图
+    vscode_1.commands.registerCommand("DiFlow.hideChatGPTView", () => {
+        vscode_1.commands
+            .executeCommand("setContext", "DiFlow.chatGPTView", false)
+            .then(() => {
+            webviewViewProvider?.removeWebView();
+        });
+    }), 
+    // 添加解释这段文案
+    vscode_1.commands.registerCommand("DiFlow.explainByChatGPT", () => {
+        // 获取当前活动的文本编辑器
+        const editor = vscode_1.window.activeTextEditor;
+        if (editor) {
+            // 获取用户选中的文本
+            const selectedText = editor.document.getText(editor.selection);
+            if (!selectedText) {
+                vscode_1.window.showInformationMessage("没有选中的文本");
+                return;
+            }
+            // 获取本插件的设置
+            const config = vscode_1.workspace.getConfiguration("DiFlow");
+            const hostname = config.get("hostname");
+            const apiKey = config.get("apiKey");
+            if (!hostname) {
+                vscode_1.window.showInformationMessage("请先设置插件 DiFlow 的 hostname，点击左侧标签栏 DiFlow 的图标进行设置");
+                return;
+            }
+            if (!apiKey) {
+                vscode_1.window.showInformationMessage("请先设置插件 DiFlow 的 apiKey，点击左侧标签栏 DiFlow 的图标进行设置");
+                return;
+            }
+            // 打开左侧的 chatGPT 对话框,并传入问题
+            openChatGPTView(selectedText);
+        }
+        else {
+            vscode_1.window.showInformationMessage("没有活动的文本编辑器");
+        }
+    }));
+};
+exports.registerCreateChatGPTView = registerCreateChatGPTView;
+
+
+/***/ })
+/******/ 	]);
+/************************************************************************/
+/******/ 	// The module cache
+/******/ 	var __webpack_module_cache__ = {};
+/******/ 	
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/ 		// Check if module is in cache
+/******/ 		var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 		if (cachedModule !== undefined) {
+/******/ 			return cachedModule.exports;
+/******/ 		}
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = __webpack_module_cache__[moduleId] = {
+/******/ 			// no module.id needed
+/******/ 			// no module.loaded needed
+/******/ 			exports: {}
+/******/ 		};
+/******/ 	
+/******/ 		// Execute the module function
+/******/ 		__webpack_modules__[moduleId](module, module.exports, __webpack_require__);
+/******/ 	
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/ 	
+/************************************************************************/
+var __webpack_exports__ = {};
+// This entry need to be wrapped in an IIFE because it need to be in strict mode.
+(() => {
+"use strict";
+var exports = __webpack_exports__;
+
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.deactivate = exports.activate = void 0;
+const createScript_1 = __webpack_require__(1);
+const createSnippets_1 = __webpack_require__(43);
+const createSetting_1 = __webpack_require__(52);
+const createChatGPTView_1 = __webpack_require__(53);
+const cursorIntegration_1 = __webpack_require__(46);
+function activate(context) {
+    // 注册各种命令
+    (0, createScript_1.registerCreateScript)(context);
+    (0, createSnippets_1.registerCreateSnippets)(context);
+    (0, createSetting_1.registerCreateSetting)(context);
+    (0, createChatGPTView_1.registerCreateChatGPTView)(context);
+    // 注册 Cursor 集成
+    (0, cursorIntegration_1.registerCursorIntegration)(context);
+    (0, cursorIntegration_1.registerCursorManagement)(context);
+}
+exports.activate = activate;
+function deactivate() { }
+exports.deactivate = deactivate;
+
+})();
+
+module.exports = __webpack_exports__;
+/******/ })()
+;
 //# sourceMappingURL=extension.js.map

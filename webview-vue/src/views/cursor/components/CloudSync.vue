@@ -6,7 +6,7 @@
           <!-- 用户状态区域 -->
           <div class="user-status">
             <a-card size="small" title="用户状态">
-              <div v-if="!userInfo.isLoggedIn" class="login-section">
+              <div v-if="!props.userInfo.isLoggedIn" class="login-section">
                 <a-space direction="vertical" style="width: 100%">
                   <a-alert
                     message="未登录"
@@ -17,7 +17,7 @@
                   <a-button
                     type="primary"
                     @click="$emit('loginUser')"
-                    :loading="loading.login"
+                    :loading="props.loading.login"
                     size="large"
                   >
                     <template #icon><UserOutlined /></template>
@@ -28,33 +28,30 @@
               <div v-else class="user-info">
                 <a-descriptions size="small" :column="1" bordered>
                   <a-descriptions-item label="用户邮箱">
-                    {{ userInfo.email }}
-                  </a-descriptions-item>
-                  <a-descriptions-item label="用户名" v-if="userInfo.username">
-                    {{ userInfo.username }}
+                    {{ props.userInfo.email }}
                   </a-descriptions-item>
                   <a-descriptions-item label="登录状态">
                     <a-badge status="success" text="已登录" />
                   </a-descriptions-item>
                   <a-descriptions-item
                     label="最后同步时间"
-                    v-if="syncInfo.lastSyncTime"
+                    v-if="props.syncInfo.lastSyncTime"
                   >
-                    {{ formatTime(syncInfo.lastSyncTime) }}
+                    {{ formatTime(props.syncInfo.lastSyncTime) }}
                   </a-descriptions-item>
                 </a-descriptions>
                 <div style="margin-top: 16px">
                   <a-space>
                     <a-button
                       @click="$emit('logoutUser')"
-                      :loading="loading.logout"
+                      :loading="props.loading.logout"
                     >
                       退出登录
                     </a-button>
                     <a-button
                       type="primary"
                       @click="$emit('syncAllData')"
-                      :loading="loading.syncAll"
+                      :loading="props.loading.syncAll"
                     >
                       <template #icon><SyncOutlined /></template>
                       立即同步
@@ -66,7 +63,7 @@
           </div>
 
           <!-- 同步操作区域 -->
-          <div v-if="userInfo.isLoggedIn" class="sync-operations">
+          <div v-if="props.userInfo.isLoggedIn" class="sync-operations">
             <a-row :gutter="16">
               <a-col :span="12">
                 <a-card size="small" title="规则同步">
@@ -75,21 +72,21 @@
                       <a-space>
                         <a-badge
                           :status="
-                            syncInfo.rulesStatus === 'synced'
+                            props.syncInfo.rulesStatus === 'synced'
                               ? 'success'
                               : 'warning'
                           "
                         />
                         <span>
                           状态:
-                          {{ getSyncStatusText(syncInfo.rulesStatus) }}
+                          {{ getSyncStatusText(props.syncInfo.rulesStatus) }}
                         </span>
                       </a-space>
                     </div>
                     <a-space>
                       <a-button
                         @click="$emit('syncRulesToCloud')"
-                        :loading="loading.syncRules"
+                        :loading="props.loading.syncRules"
                         size="small"
                       >
                         <template #icon>
@@ -99,7 +96,7 @@
                       </a-button>
                       <a-button
                         @click="$emit('syncRulesFromCloud')"
-                        :loading="loading.syncRules"
+                        :loading="props.loading.syncRules"
                         size="small"
                       >
                         <template #icon>
@@ -118,21 +115,21 @@
                       <a-space>
                         <a-badge
                           :status="
-                            syncInfo.mcpStatus === 'synced'
+                            props.syncInfo.mcpStatus === 'synced'
                               ? 'success'
                               : 'warning'
                           "
                         />
                         <span>
                           状态:
-                          {{ getSyncStatusText(syncInfo.mcpStatus) }}
+                          {{ getSyncStatusText(props.syncInfo.mcpStatus) }}
                         </span>
                       </a-space>
                     </div>
                     <a-space>
                       <a-button
                         @click="$emit('syncMcpToCloud')"
-                        :loading="loading.syncMcp"
+                        :loading="props.loading.syncMcp"
                         size="small"
                       >
                         <template #icon>
@@ -142,7 +139,7 @@
                       </a-button>
                       <a-button
                         @click="$emit('syncMcpFromCloud')"
-                        :loading="loading.syncMcp"
+                        :loading="props.loading.syncMcp"
                         size="small"
                       >
                         <template #icon>
@@ -158,14 +155,14 @@
           </div>
 
           <!-- 同步日志 -->
-          <div v-if="userInfo.isLoggedIn" class="sync-logs">
+          <div v-if="props.userInfo.isLoggedIn" class="sync-logs">
             <a-card size="small" title="同步日志">
               <div
                 class="logs-container"
                 style="max-height: 200px; overflow-y: auto"
               >
                 <div
-                  v-for="(log, index) in syncLogs"
+                  v-for="(log, index) in props.syncLogs"
                   :key="index"
                   :class="['log-item', log.type]"
                   style="padding: 4px 0; border-bottom: 1px solid #f0f0f0"
@@ -190,7 +187,7 @@
                   </a-space>
                 </div>
                 <div
-                  v-if="syncLogs.length === 0"
+                  v-if="props.syncLogs.length === 0"
                   style="text-align: center; color: #999; padding: 20px"
                 >
                   暂无同步日志
@@ -220,7 +217,6 @@ import {
 interface UserInfo {
   isLoggedIn: boolean;
   email: string;
-  username: string;
   token: string;
 }
 
@@ -249,7 +245,7 @@ interface Props {
   };
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 defineEmits<{
   loginUser: [];

@@ -5,7 +5,10 @@
         <a-space direction="vertical" style="width: 100%">
           <div class="mcp-header">
             <a-space>
-              <a-button @click="$emit('loadServers')" :loading="loading.mcp">
+              <a-button
+                @click="$emit('loadServers')"
+                :loading="props.loading.mcp"
+              >
                 <template #icon><ReloadOutlined /></template>
                 刷新服务器
               </a-button>
@@ -18,7 +21,7 @@
 
           <div class="mcp-list">
             <a-table
-              :dataSource="mcpServers"
+              :dataSource="props.mcpServers"
               :columns="mcpColumns"
               :pagination="false"
               size="small"
@@ -81,7 +84,7 @@ interface Props {
   };
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 defineEmits<{
   loadServers: [];

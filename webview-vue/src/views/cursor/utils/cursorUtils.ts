@@ -42,11 +42,7 @@ interface SystemInfo {
 
 interface UserInfo {
   email: string;
-  username: string;
-  cursorUserId: string;
-  avatar: string;
   isLoggedIn: boolean;
-  // CloudSync 组件需要的属性
   token: string;
 }
 
@@ -152,9 +148,6 @@ export const createInitialState = () => ({
   },
   userInfo: {
     email: "",
-    username: "",
-    cursorUserId: "",
-    avatar: "",
     isLoggedIn: false,
     token: "",
   },
@@ -196,11 +189,10 @@ export const createInitialState = () => ({
  */
 export const createTabItems = () => [
   { key: "basic", tab: "基础信息", icon: "InfoCircleOutlined" },
+  { key: "sync", tab: "云端同步", icon: "CloudSyncOutlined" },
   { key: "rules", tab: "规则管理", icon: "FileTextOutlined" },
   { key: "mcp", tab: "MCP 管理", icon: "ApiOutlined" },
-  { key: "sync", tab: "云端同步", icon: "CloudSyncOutlined" },
   { key: "chat", tab: "快捷对话", icon: "MessageOutlined" },
-  { key: "test", tab: "服务器测试", icon: "ExperimentOutlined" },
 ];
 
 /**

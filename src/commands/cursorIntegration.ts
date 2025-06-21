@@ -7,11 +7,21 @@ import { showWebView } from "../utils/webviewUtils";
 export interface CursorSettings {
   rules?: string; // .cursorrules 文件内容
   generalConfig?: {
-    [key: string]: any; // Cursor settings.json 的所有配置
+    [key: string]: unknown; // Cursor settings.json 的所有配置
   };
   mcpConfig?: {
-    mcpServers?: Record<string, any>;
+    mcpServers?: Record<string, McpServerConfig>;
   };
+}
+
+/**
+ * MCP 服务器配置接口
+ */
+export interface McpServerConfig {
+  command: string;
+  args?: string[];
+  env?: Record<string, string>;
+  [key: string]: unknown;
 }
 
 /**
@@ -23,6 +33,33 @@ interface ConfigPaths {
   rulesPath?: string;
   cliPath?: string;
   customInstallPath?: string; // 用户自定义安装路径
+}
+
+/**
+ * 用户信息接口
+ */
+interface UserInfo {
+  isLoggedIn: boolean;
+  email?: string;
+  username?: string;
+  cursorUserId?: string;
+  avatar?: string;
+  membershipType?: string;
+  token?: string;
+}
+
+/**
+ * 系统信息接口
+ */
+interface SystemInfo {
+  platform: string;
+  version: string;
+  isLoggedIn: boolean;
+  cursorPath: string;
+  configPath: string;
+  mcpPath: string;
+  rulesPath: string;
+  cliPath: string;
 }
 
 /**
@@ -730,7 +767,7 @@ export class CursorIntegration {
       console.log("执行命令:", command);
 
       return new Promise((resolve, reject) => {
-        exec(command, (error: any, stdout: any, stderr: any) => {
+        exec(command, (error: Error | null, stdout: string, stderr: string) => {
           if (error) {
             console.error("打开 Cursor 失败:", error);
             reject(new Error(`打开 Cursor 失败: ${error.message}`));
@@ -747,123 +784,248 @@ export class CursorIntegration {
   }
 
   /**
-   * 打开 Cursor Chat 并发送消息 - 使用 VS Code 标准 API
+   * 打开Cursor Chat并发送消息
    */
   async openCursorChat(message?: string): Promise<boolean> {
     try {
       console.log("尝试打开 Cursor Chat...");
 
-      // 方法1: 尝试使用 Cursor 特有的聊天命令
+      // 方法1: 尝试使用 Cursor 特有的聊天命令（扩展命令列表）
       const cursorChatCommands = [
+        // Cursor 特有命令 - 最可能的命令放在前面
         "aichat.newchat",
+        "cursor.chat.new",
+        "cursor.chat.focus",
+        "cursor.chat.open",
         "aichat.newchataction",
+        "cursor.newChat",
+        "cursor.openChat",
+        "cursor.ai.chat",
+        "cursor.ai.newChat",
+        // GitHub Copilot 相关（Cursor可能使用）
+        "github.copilot.chat.open",
+        "github.copilot.interactiveEditor.explain",
+        "github.copilot.chat.newChat",
+        // VS Code 通用聊天命令
         "workbench.action.chat.open",
         "workbench.action.chat.newChat",
         "workbench.panel.chat.view.copilot.focus",
         "workbench.action.openChat",
-        "cursor.chat.focus",
-        "cursor.chat.new",
+        "workbench.action.chat.openInSidebar",
+        "workbench.action.chat.openInPanel",
+        "workbench.action.chat.focus",
+        // 其他可能的AI聊天命令
+        "ai.chat.new",
+        "ai.chat.open",
+        "chat.action.open",
+        "interactive.input.focus",
+        // 可能的内部命令
+        "vscode.chat.open",
+        "vscode.ai.chat.new",
       ];
 
+      let chatOpened = false;
+
+      // 逐一尝试聊天命令
       for (const command of cursorChatCommands) {
         try {
           console.log(`尝试执行命令: ${command}`);
-
-          if (message) {
-            // 如果有消息，尝试带参数执行
-            await commands.executeCommand(command, { query: message });
-          } else {
-            // 只是打开聊天
-            await commands.executeCommand(command);
-          }
-
+          await commands.executeCommand(command);
           console.log(`成功执行命令: ${command}`);
-
-          // 如果有消息且命令执行成功，尝试输入消息
-          if (message) {
-            await new Promise((resolve) => setTimeout(resolve, 800)); // 等待界面加载
-
-            try {
-              // 尝试直接输入文本
-              await commands.executeCommand("type", { text: message });
-              await new Promise((resolve) => setTimeout(resolve, 200));
-
-              // 尝试发送消息（回车）
-              await commands.executeCommand(
-                "workbench.action.acceptSelectedSuggestion"
-              );
-              console.log("成功发送消息到聊天");
-            } catch (typeError) {
-              console.log("直接输入失败，消息已复制到剪贴板");
-              await this.copyToClipboard(message);
-            }
-          }
-
-          return true;
+          chatOpened = true;
+          break;
         } catch (error) {
           console.log(`命令 ${command} 执行失败:`, error);
         }
       }
 
-      // 方法2: 如果所有命令都失败，尝试使用快捷键
-      try {
-        console.log("尝试使用快捷键打开聊天...");
-        await commands.executeCommand("workbench.action.quickOpen");
-        await new Promise((resolve) => setTimeout(resolve, 300));
-        await commands.executeCommand("type", { text: ">chat" });
-        await new Promise((resolve) => setTimeout(resolve, 200));
-        await commands.executeCommand(
-          "workbench.action.acceptSelectedSuggestion"
-        );
+      // 方法2: 如果命令方式失败，尝试模拟Cursor的快捷键 Ctrl+L (Windows/Linux) 或 Cmd+L (macOS)
+      if (!chatOpened) {
+        try {
+          console.log("尝试使用 Ctrl+L/Cmd+L 快捷键打开聊天...");
 
-        if (message) {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          await this.copyToClipboard(message);
-          console.log("聊天界面已打开，消息已复制到剪贴板");
+          // 确保编辑器获得焦点
+          await commands.executeCommand(
+            "workbench.action.focusActiveEditorGroup"
+          );
+          await new Promise((resolve) => setTimeout(resolve, 300));
+
+          // 尝试执行可能的快捷键绑定命令
+          const shortcutCommands = [
+            "workbench.action.chat.openInSidebar",
+            "workbench.action.chat.openInPanel",
+            "workbench.action.chat.focus",
+            "workbench.action.terminal.chat.start",
+            "interactive.input.focus",
+            "notebook.cell.chat.start",
+          ];
+
+          let shortcutSuccess = false;
+          for (const cmd of shortcutCommands) {
+            try {
+              console.log(`尝试执行快捷键命令: ${cmd}`);
+              await commands.executeCommand(cmd);
+              console.log(`快捷键命令执行成功: ${cmd}`);
+              shortcutSuccess = true;
+              break;
+            } catch (cmdError) {
+              console.log(`快捷键命令失败: ${cmd}`, cmdError);
+            }
+          }
+
+          if (!shortcutSuccess) {
+            // 如果快捷键命令都失败了，尝试模拟按键
+            console.log("尝试模拟键盘按键...");
+
+            // 使用workbench.action.sendSequence命令模拟按键
+            const keySequence =
+              process.platform === "darwin" ? "cmd+l" : "ctrl+l";
+
+            try {
+              await commands.executeCommand("workbench.action.sendSequence", {
+                text: keySequence,
+              });
+              console.log(`键盘序列发送成功: ${keySequence}`);
+            } catch (seqError) {
+              console.log("sendSequence失败，尝试其他方式:", seqError);
+
+              // 最后尝试：模拟具体的按键事件
+              if (process.platform === "darwin") {
+                // macOS: Cmd+L
+                await commands.executeCommand(
+                  "workbench.action.terminal.sendSequence",
+                  {
+                    text: "\u001b[1;5D", // 尝试发送控制序列
+                  }
+                );
+              } else {
+                // Windows/Linux: Ctrl+L
+                await commands.executeCommand(
+                  "workbench.action.terminal.sendSequence",
+                  {
+                    text: "\u000C", // Ctrl+L 的ASCII码
+                  }
+                );
+              }
+            }
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 800));
+          chatOpened = true;
+        } catch (keyboardError) {
+          console.log("键盘快捷键方法失败:", keyboardError);
         }
-
-        return true;
-      } catch (shortcutError) {
-        console.log("快捷键方法失败:", shortcutError);
       }
 
-      // 方法3: 最后的备选方案 - 复制消息到剪贴板并提示用户
-      if (message) {
-        await this.copyToClipboard(message);
-        console.log(
-          "所有自动打开方法都失败了，消息已复制到剪贴板，请手动打开聊天界面并粘贴"
-        );
-
-        // 尝试显示通知
+      // 方法3: 尝试通过命令面板打开聊天
+      if (!chatOpened) {
         try {
-          const vscode = require("vscode");
-          vscode.window.showInformationMessage(
-            "消息已复制到剪贴板，请手动打开 Cursor Chat 并粘贴",
-            "确定"
+          console.log("尝试通过命令面板打开聊天...");
+          await commands.executeCommand("workbench.action.quickOpen");
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          await commands.executeCommand("type", { text: ">chat" });
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          await commands.executeCommand(
+            "workbench.action.acceptSelectedSuggestion"
           );
-        } catch (notificationError) {
-          console.log("无法显示通知:", notificationError);
+          chatOpened = true;
+        } catch (commandPaletteError) {
+          console.log("命令面板方法失败:", commandPaletteError);
         }
+      }
 
+      // 方法4: 尝试直接模拟键盘快捷键
+      if (!chatOpened) {
+        try {
+          console.log("尝试直接模拟键盘快捷键...");
+
+          // 尝试发送键盘事件
+          await commands.executeCommand(
+            "workbench.action.focusActiveEditorGroup"
+          );
+          await new Promise((resolve) => setTimeout(resolve, 200));
+
+          // 模拟 Ctrl+L 或 Cmd+L
+          const keyBinding = process.platform === "darwin" ? "cmd+l" : "ctrl+l";
+          await commands.executeCommand(
+            "workbench.action.terminal.sendSequence",
+            {
+              text: keyBinding,
+            }
+          );
+
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          chatOpened = true;
+        } catch (keyboardError) {
+          console.log("键盘快捷键方法失败:", keyboardError);
+        }
+      }
+
+      // 如果聊天界面打开成功且有消息要发送
+      if (chatOpened && message) {
+        console.log("聊天界面已打开，开始发送消息...");
+
+        // 等待聊天界面完全加载
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+
+        try {
+          // 方法1: 尝试直接在聊天输入框中输入
+          console.log("尝试直接输入消息...");
+          await commands.executeCommand("type", { text: message });
+          await new Promise((resolve) => setTimeout(resolve, 500));
+
+          // 尝试发送消息 - 使用回车键
+          await commands.executeCommand("type", { text: "\n" });
+          console.log("消息已通过回车键发送");
+          return true;
+        } catch (directInputError) {
+          console.log("直接输入失败，尝试其他方式:", directInputError);
+
+          try {
+            // 方法2: 尝试使用editor.action.insertText命令
+            await commands.executeCommand("editor.action.insertText", {
+              text: message,
+            });
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            await commands.executeCommand("type", { text: "\n" });
+            console.log("消息已通过insertText发送");
+            return true;
+          } catch (insertTextError) {
+            console.log("insertText方式也失败:", insertTextError);
+
+            try {
+              // 方法3: 尝试使用剪贴板 + 粘贴的方式
+              console.log("尝试使用剪贴板粘贴方式...");
+              await this.copyToClipboard(message);
+              await new Promise((resolve) => setTimeout(resolve, 300));
+
+              // 粘贴内容
+              await commands.executeCommand(
+                "editor.action.clipboardPasteAction"
+              );
+              await new Promise((resolve) => setTimeout(resolve, 500));
+
+              // 发送消息
+              await commands.executeCommand("type", { text: "\n" });
+              console.log("消息已通过剪贴板粘贴方式发送");
+              return true;
+            } catch (pasteError) {
+              console.log("剪贴板粘贴方式也失败:", pasteError);
+            }
+          }
+        }
+      }
+
+      // 如果只是打开聊天界面（没有消息要发送）
+      if (chatOpened) {
+        console.log("聊天界面已成功打开");
         return true;
       }
 
       console.log("无法打开 Cursor Chat");
       return false;
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("打开 Cursor Chat 失败:", error);
-
-      // 如果有消息，至少复制到剪贴板
-      if (message) {
-        try {
-          await this.copyToClipboard(message);
-          console.log("发生错误，但消息已复制到剪贴板");
-          return true;
-        } catch (clipboardError) {
-          console.error("复制到剪贴板也失败了:", clipboardError);
-        }
-      }
-
       throw error;
     }
   }
@@ -886,7 +1048,7 @@ export class CursorIntegration {
       }
 
       await new Promise<void>((resolve, reject) => {
-        exec(command, (error: any) => {
+        exec(command, (error: Error | null) => {
           if (error) {
             reject(error);
           } else {
@@ -905,7 +1067,7 @@ export class CursorIntegration {
   /**
    * 获取 MCP 服务器列表
    */
-  async getMcpServers(): Promise<any> {
+  async getMcpServers(): Promise<Record<string, McpServerConfig>> {
     try {
       // 确保配置路径是最新的
       this.detectConfigPaths();
@@ -919,7 +1081,9 @@ export class CursorIntegration {
       }
 
       const content = fs.readFileSync(mcpPath, "utf8");
-      const config = JSON.parse(content);
+      const config = JSON.parse(content) as {
+        mcpServers?: Record<string, McpServerConfig>;
+      };
 
       console.log("MCP 配置内容:", config);
 
@@ -928,8 +1092,8 @@ export class CursorIntegration {
         return config.mcpServers;
       }
 
-      // 如果没有 mcpServers 字段，返回整个配置
-      return config;
+      // 如果没有 mcpServers 字段，返回空对象
+      return {};
     } catch (error) {
       console.error("Error reading MCP configuration:", error);
       return {};
@@ -939,7 +1103,7 @@ export class CursorIntegration {
   /**
    * 添加 MCP 服务器
    */
-  async addMcpServer(name: string, config: any): Promise<boolean> {
+  async addMcpServer(name: string, config: McpServerConfig): Promise<boolean> {
     try {
       const settings = await this.getCursorSettings();
       if (!settings.mcpConfig) {
@@ -1044,15 +1208,7 @@ export class CursorIntegration {
   /**
    * 获取 Cursor 用户信息 - 改进版本，从 SQLite 数据库读取
    */
-  async getCursorUserInfo(): Promise<{
-    isLoggedIn: boolean;
-    email?: string;
-    username?: string;
-    cursorUserId?: string;
-    avatar?: string;
-    membershipType?: string;
-    token?: string;
-  }> {
+  async getCursorUserInfo(): Promise<UserInfo> {
     try {
       console.log("=== 开始获取 Cursor 用户信息 ===");
 
@@ -1162,15 +1318,7 @@ export class CursorIntegration {
   /**
    * 从 settings.json 文件获取用户信息的备用方法
    */
-  private async getCursorUserInfoFromSettings(): Promise<{
-    isLoggedIn: boolean;
-    email?: string;
-    username?: string;
-    cursorUserId?: string;
-    avatar?: string;
-    membershipType?: string;
-    token?: string;
-  }> {
+  private async getCursorUserInfoFromSettings(): Promise<UserInfo> {
     try {
       console.log("使用备用方法从 settings.json 读取用户信息");
 
@@ -1193,7 +1341,7 @@ export class CursorIntegration {
 
       console.log("设置文件内容长度:", settingsContent.length);
 
-      const settings = JSON.parse(settingsContent);
+      const settings = JSON.parse(settingsContent) as Record<string, unknown>;
 
       // 定义所有可能包含用户信息的字段
       const emailFields = [
@@ -1232,17 +1380,17 @@ export class CursorIntegration {
 
       // 1. 直接字段搜索
       for (const field of emailFields) {
-        if (settings[field]) {
+        if (settings[field] && typeof settings[field] === "string") {
           console.log(`✅ 在字段 '${field}' 找到邮箱:`, settings[field]);
-          email = settings[field];
+          email = settings[field] as string;
           break;
         }
       }
 
       for (const field of nameFields) {
-        if (settings[field]) {
+        if (settings[field] && typeof settings[field] === "string") {
           console.log(`✅ 在字段 '${field}' 找到用户名:`, settings[field]);
-          name = settings[field];
+          name = settings[field] as string;
           break;
         }
       }
@@ -1252,7 +1400,7 @@ export class CursorIntegration {
         console.log("=== 开始深度搜索邮箱 ===");
 
         const deepSearch = (
-          obj: any,
+          obj: Record<string, unknown>,
           path: string = ""
         ): string | undefined => {
           for (const [key, value] of Object.entries(obj)) {
@@ -1273,7 +1421,10 @@ export class CursorIntegration {
               value !== null &&
               !Array.isArray(value)
             ) {
-              const result = deepSearch(value, currentPath);
+              const result = deepSearch(
+                value as Record<string, unknown>,
+                currentPath
+              );
               if (result) return result;
             }
           }
@@ -1314,16 +1465,7 @@ export class CursorIntegration {
   /**
    * 获取系统信息
    */
-  getSystemInfo(): {
-    platform: string;
-    version: string;
-    isLoggedIn: boolean;
-    cursorPath: string;
-    configPath: string;
-    mcpPath: string;
-    rulesPath: string;
-    cliPath: string;
-  } {
+  getSystemInfo(): SystemInfo {
     return {
       platform: this.platform,
       version: process.version, // Node.js 版本
