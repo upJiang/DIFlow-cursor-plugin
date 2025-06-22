@@ -228,6 +228,50 @@ interface TaskHandler {
 }
 
 /**
+ * 具体任务数据类型定义
+ */
+interface AddMcpServerData {
+  name: string;
+  config: {
+    command: string;
+    args?: string[];
+    env?: Record<string, string>;
+    [key: string]: unknown;
+  };
+}
+
+interface RemoveMcpServerData {
+  name: string;
+}
+
+interface OpenCursorData {
+  filePath?: string;
+}
+
+interface SetCustomInstallPathData {
+  path?: string;
+  customPath?: string;
+}
+
+interface NetworkRequestData {
+  url: string;
+  method?: string;
+  headers?: Record<string, unknown>;
+  body?: unknown;
+}
+
+interface ProxyRequestData {
+  method: string;
+  url: string;
+  data?: unknown;
+  headers?: Record<string, unknown>;
+}
+
+interface OpenCursorChatData {
+  message?: string;
+}
+
+/**
  * 任务映射表
  */
 const taskMap: Record<string, TaskHandler> = {};
@@ -400,8 +444,8 @@ taskMap.openCursorChat = async (
 ) => {
   try {
     console.log("打开 Cursor 聊天...", message.data);
-    const data = message.data as { message?: string };
-    const result = await cursorIntegration.openCursorChat(data?.message);
+    const data = message.data as OpenCursorChatData;
+    const result = await cursorIntegration.openCursorChat(data?.message || "");
     console.log("打开 Cursor 聊天结果:", result);
 
     // 发送结果回 webview - 修复返回格式
@@ -442,8 +486,8 @@ taskMap.sendToCursorChat = async (
 ) => {
   try {
     console.log("发送消息到 Cursor Chat...", message.data);
-    const data = message.data as { message?: string };
-    const result = await cursorIntegration.openCursorChat(data?.message);
+    const data = message.data as OpenCursorChatData;
+    const result = await cursorIntegration.openCursorChat(data?.message || "");
     console.log("发送消息到 Cursor Chat 结果:", result);
 
     // 发送结果回 webview - 修复返回格式
@@ -523,7 +567,8 @@ taskMap.addMcpServer = async (
 ) => {
   try {
     console.log("添加 MCP 服务器...", message.data);
-    const { name, config } = message.data || {};
+    const data = message.data as AddMcpServerData;
+    const { name, config } = data;
     if (!name || !config) {
       throw new Error("缺少必要参数：name 或 config");
     }
@@ -579,7 +624,8 @@ taskMap.removeMcpServer = async (
 ) => {
   try {
     console.log("删除 MCP 服务器...", message.data);
-    const name = message.data?.name;
+    const data = message.data as RemoveMcpServerData;
+    const { name } = data;
     if (!name) {
       throw new Error("缺少必要参数：name");
     }
@@ -744,7 +790,8 @@ taskMap.openCursor = async (
 ) => {
   try {
     console.log("打开 Cursor...", message.data);
-    const filePath = message.data?.filePath as string | undefined;
+    const data = message.data as OpenCursorData;
+    const filePath = data?.filePath;
     const result = await cursorIntegration.openCursor(filePath);
     console.log("打开 Cursor 结果:", result);
 
@@ -787,7 +834,8 @@ taskMap.setCustomInstallPath = async (
     console.log("setCustomInstallPath 收到数据:", message.data);
 
     // 修复参数名称匹配问题
-    const customPath = message.data?.path || message.data?.customPath;
+    const data = message.data as SetCustomInstallPathData;
+    const customPath = data?.path || data?.customPath;
 
     if (!customPath || typeof customPath !== "string") {
       throw new Error("未提供有效的安装路径");
@@ -1080,7 +1128,7 @@ taskMap.networkRequest = async (
   message: TaskMessage
 ) => {
   try {
-    const requestData = message.data;
+    const requestData = message.data as NetworkRequestData;
     if (!requestData || typeof requestData !== "object") {
       throw new Error("请求数据无效");
     }
@@ -1204,7 +1252,7 @@ taskMap.proxyRequest = async (
 ) => {
   try {
     console.log("代理网络请求:", message.data);
-    const requestData = message.data;
+    const requestData = message.data as ProxyRequestData;
     if (!requestData || typeof requestData !== "object") {
       throw new Error("请求数据无效");
     }

@@ -84,7 +84,12 @@ interface Props {
   };
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  mcpServers: () => [],
+  loading: () => ({
+    mcp: false,
+  }),
+});
 
 defineEmits<{
   loadServers: [];

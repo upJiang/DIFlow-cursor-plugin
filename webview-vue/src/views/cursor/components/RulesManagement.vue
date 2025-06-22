@@ -62,6 +62,7 @@ import {
   ReloadOutlined,
   SaveOutlined,
 } from "@ant-design/icons-vue";
+import { withDefaults } from "vue";
 
 interface Props {
   cursorRules: string;
@@ -72,7 +73,14 @@ interface Props {
   };
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  cursorRules: "",
+  loading: () => ({
+    load: false,
+    save: false,
+    clear: false,
+  }),
+});
 
 defineEmits<{
   loadRules: [];

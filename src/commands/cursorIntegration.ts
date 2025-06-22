@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import * as vscode from "vscode";
 import { commands, ExtensionContext } from "vscode";
 import { showWebView } from "../utils/webviewUtils";
 
@@ -68,6 +69,14 @@ interface SystemInfo {
 export class CursorIntegration {
   private configPaths: ConfigPaths = {};
   private platform: string;
+  private logger = {
+    debug: (message: string, ...args: any[]) =>
+      console.log(`[DEBUG] ${message}`, ...args),
+    warn: (message: string, ...args: any[]) =>
+      console.warn(`[WARN] ${message}`, ...args),
+    error: (message: string, ...args: any[]) =>
+      console.error(`[ERROR] ${message}`, ...args),
+  };
 
   constructor() {
     this.platform = os.platform();
@@ -784,283 +793,255 @@ export class CursorIntegration {
   }
 
   /**
-   * 打开Cursor Chat并发送消息
+   * 打开 Cursor Chat 并发送消息
    */
-  async openCursorChat(message?: string): Promise<boolean> {
+  public async openCursorChat(message?: string): Promise<boolean> {
+    this.logger.debug("开始打开 Cursor Chat...");
+
     try {
-      console.log("尝试打开 Cursor Chat...");
+      // 如果没有提供消息，提示用户输入
+      if (!message) {
+        const input = await vscode.window.showInputBox({
+          prompt: "请输入要发送到 Cursor Chat 的消息",
+          placeHolder: "输入您的问题或请求...",
+        });
+        if (!input) {
+          vscode.window.showInformationMessage("❌ 已取消发送消息");
+          return false;
+        }
+        message = input;
+      }
 
-      // 方法1: 尝试使用 Cursor 特有的聊天命令（扩展命令列表）
-      const cursorChatCommands = [
-        // Cursor 特有命令 - 最可能的命令放在前面
-        "aichat.newchat",
-        "cursor.chat.new",
-        "cursor.chat.focus",
-        "cursor.chat.open",
-        "aichat.newchataction",
-        "cursor.newChat",
-        "cursor.openChat",
-        "cursor.ai.chat",
-        "cursor.ai.newChat",
-        // GitHub Copilot 相关（Cursor可能使用）
-        "github.copilot.chat.open",
-        "github.copilot.interactiveEditor.explain",
-        "github.copilot.chat.newChat",
-        // VS Code 通用聊天命令
-        "workbench.action.chat.open",
-        "workbench.action.chat.newChat",
-        "workbench.panel.chat.view.copilot.focus",
-        "workbench.action.openChat",
-        "workbench.action.chat.openInSidebar",
-        "workbench.action.chat.openInPanel",
-        "workbench.action.chat.focus",
-        // 其他可能的AI聊天命令
-        "ai.chat.new",
-        "ai.chat.open",
-        "chat.action.open",
-        "interactive.input.focus",
-        // 可能的内部命令
-        "vscode.chat.open",
-        "vscode.ai.chat.new",
-      ];
+      // 复制消息到剪贴板
+      await vscode.env.clipboard.writeText(message);
+      this.logger.debug("✅ 消息已复制到剪贴板");
 
-      let chatOpened = false;
-
-      // 逐一尝试聊天命令
-      for (const command of cursorChatCommands) {
+      // 打开聊天界面
+      this.logger.debug("正在打开聊天界面...");
+      try {
+        await vscode.commands.executeCommand("aichat.newchataction");
+        this.logger.debug("✅ 成功执行 aichat.newchataction");
+      } catch (error) {
+        this.logger.warn("⚠️ aichat.newchataction 失败，尝试其他命令");
         try {
-          console.log(`尝试执行命令: ${command}`);
-          await commands.executeCommand(command);
-          console.log(`成功执行命令: ${command}`);
-          chatOpened = true;
-          break;
+          await vscode.commands.executeCommand("workbench.action.chat.open");
+          this.logger.debug("✅ 成功执行 workbench.action.chat.open");
+        } catch (error2) {
+          this.logger.warn(
+            "⚠️ workbench.action.chat.open 失败，尝试最后一个命令"
+          );
+          await vscode.commands.executeCommand("workbench.action.chat.newChat");
+          this.logger.debug("✅ 成功执行 workbench.action.chat.newChat");
+        }
+      }
+
+      // 等待界面加载
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+      this.logger.debug("⏱️ 等待界面加载完成");
+
+      // 尝试聚焦到聊天输入框
+      try {
+        await vscode.commands.executeCommand(
+          "workbench.action.chat.focusInput"
+        );
+        this.logger.debug("✅ 成功聚焦到聊天输入框");
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      } catch (error) {
+        this.logger.warn("⚠️ 聚焦命令失败，继续执行");
+      }
+
+      // 使用优化的系统级方法发送消息
+      let messageSent = false;
+
+      if (this.platform === "darwin") {
+        // macOS: 使用优化的 AppleScript（不激活应用，避免登录问题）
+        this.logger.debug("🎯 使用优化的 AppleScript 方法发送消息");
+
+        try {
+          const { exec } = require("child_process");
+          const { promisify } = require("util");
+          const execAsync = promisify(exec);
+
+          // 优化的 AppleScript - 不强制激活应用，避免会话重置
+          const appleScript = `
+            tell application "System Events"
+              -- 检查 Cursor 是否已经在运行，不强制激活
+              if (exists (processes whose name is "Cursor")) then
+                -- 直接操作当前活动窗口，不切换应用
+                delay 0.3
+                
+                -- 清空当前输入内容（温和方式）
+                key code 0 using {command down} -- Cmd+A 全选
+                delay 0.1
+                key code 51 -- Delete 键删除内容
+                delay 0.1
+                
+                -- 粘贴消息内容
+                key code 9 using {command down} -- Cmd+V 粘贴
+                delay 0.3
+                
+                -- 发送消息：按 Enter 键
+                key code 36 -- Enter 键
+                delay 0.2
+                
+              else
+                error "Cursor 应用未运行"
+              end if
+            end tell
+          `;
+
+          this.logger.debug("执行优化的 AppleScript 键盘模拟...");
+          await execAsync(`osascript -e '${appleScript}'`);
+
+          this.logger.debug("✅ AppleScript 执行完成");
+          messageSent = true;
         } catch (error) {
-          console.log(`命令 ${command} 执行失败:`, error);
+          this.logger.error("❌ AppleScript 执行失败:", error);
+          // 如果 AppleScript 失败，回退到 VS Code 命令方法
+          messageSent = await this.fallbackSendMethod(message);
         }
-      }
+      } else if (this.platform === "win32") {
+        // Windows: 使用 PowerShell 进行键盘模拟
+        this.logger.debug("🎯 使用 PowerShell 方法发送消息（Windows）");
 
-      // 方法2: 如果命令方式失败，尝试模拟Cursor的快捷键 Ctrl+L (Windows/Linux) 或 Cmd+L (macOS)
-      if (!chatOpened) {
         try {
-          console.log("尝试使用 Ctrl+L/Cmd+L 快捷键打开聊天...");
+          const { exec } = require("child_process");
+          const { promisify } = require("util");
+          const execAsync = promisify(exec);
 
-          // 确保编辑器获得焦点
-          await commands.executeCommand(
-            "workbench.action.focusActiveEditorGroup"
-          );
-          await new Promise((resolve) => setTimeout(resolve, 300));
+          // PowerShell 脚本进行键盘模拟
+          const powershellScript = `
+            Add-Type -AssemblyName System.Windows.Forms
+            
+            # 等待一下确保焦点正确
+            Start-Sleep -Milliseconds 300
+            
+            # 全选当前内容
+            [System.Windows.Forms.SendKeys]::SendWait("^a")
+            Start-Sleep -Milliseconds 100
+            
+            # 删除内容
+            [System.Windows.Forms.SendKeys]::SendWait("{DELETE}")
+            Start-Sleep -Milliseconds 100
+            
+            # 粘贴消息
+            [System.Windows.Forms.SendKeys]::SendWait("^v")
+            Start-Sleep -Milliseconds 300
+            
+            # 发送消息（Enter 键）
+            [System.Windows.Forms.SendKeys]::SendWait("{ENTER}")
+            Start-Sleep -Milliseconds 200
+          `;
 
-          // 尝试执行可能的快捷键绑定命令
-          const shortcutCommands = [
-            "workbench.action.chat.openInSidebar",
-            "workbench.action.chat.openInPanel",
-            "workbench.action.chat.focus",
-            "workbench.action.terminal.chat.start",
-            "interactive.input.focus",
-            "notebook.cell.chat.start",
-          ];
-
-          let shortcutSuccess = false;
-          for (const cmd of shortcutCommands) {
-            try {
-              console.log(`尝试执行快捷键命令: ${cmd}`);
-              await commands.executeCommand(cmd);
-              console.log(`快捷键命令执行成功: ${cmd}`);
-              shortcutSuccess = true;
-              break;
-            } catch (cmdError) {
-              console.log(`快捷键命令失败: ${cmd}`, cmdError);
-            }
-          }
-
-          if (!shortcutSuccess) {
-            // 如果快捷键命令都失败了，尝试模拟按键
-            console.log("尝试模拟键盘按键...");
-
-            // 使用workbench.action.sendSequence命令模拟按键
-            const keySequence =
-              process.platform === "darwin" ? "cmd+l" : "ctrl+l";
-
-            try {
-              await commands.executeCommand("workbench.action.sendSequence", {
-                text: keySequence,
-              });
-              console.log(`键盘序列发送成功: ${keySequence}`);
-            } catch (seqError) {
-              console.log("sendSequence失败，尝试其他方式:", seqError);
-
-              // 最后尝试：模拟具体的按键事件
-              if (process.platform === "darwin") {
-                // macOS: Cmd+L
-                await commands.executeCommand(
-                  "workbench.action.terminal.sendSequence",
-                  {
-                    text: "\u001b[1;5D", // 尝试发送控制序列
-                  }
-                );
-              } else {
-                // Windows/Linux: Ctrl+L
-                await commands.executeCommand(
-                  "workbench.action.terminal.sendSequence",
-                  {
-                    text: "\u000C", // Ctrl+L 的ASCII码
-                  }
-                );
-              }
-            }
-          }
-
-          await new Promise((resolve) => setTimeout(resolve, 800));
-          chatOpened = true;
-        } catch (keyboardError) {
-          console.log("键盘快捷键方法失败:", keyboardError);
-        }
-      }
-
-      // 方法3: 尝试通过命令面板打开聊天
-      if (!chatOpened) {
-        try {
-          console.log("尝试通过命令面板打开聊天...");
-          await commands.executeCommand("workbench.action.quickOpen");
-          await new Promise((resolve) => setTimeout(resolve, 300));
-          await commands.executeCommand("type", { text: ">chat" });
-          await new Promise((resolve) => setTimeout(resolve, 200));
-          await commands.executeCommand(
-            "workbench.action.acceptSelectedSuggestion"
-          );
-          chatOpened = true;
-        } catch (commandPaletteError) {
-          console.log("命令面板方法失败:", commandPaletteError);
-        }
-      }
-
-      // 方法4: 尝试直接模拟键盘快捷键
-      if (!chatOpened) {
-        try {
-          console.log("尝试直接模拟键盘快捷键...");
-
-          // 尝试发送键盘事件
-          await commands.executeCommand(
-            "workbench.action.focusActiveEditorGroup"
-          );
-          await new Promise((resolve) => setTimeout(resolve, 200));
-
-          // 模拟 Ctrl+L 或 Cmd+L
-          const keyBinding = process.platform === "darwin" ? "cmd+l" : "ctrl+l";
-          await commands.executeCommand(
-            "workbench.action.terminal.sendSequence",
+          this.logger.debug("执行 PowerShell 键盘模拟...");
+          await execAsync(
+            `powershell -Command "${powershellScript.replace(/"/g, '\\"')}"`,
             {
-              text: keyBinding,
+              windowsHide: true,
             }
           );
 
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          chatOpened = true;
-        } catch (keyboardError) {
-          console.log("键盘快捷键方法失败:", keyboardError);
+          this.logger.debug("✅ PowerShell 执行完成");
+          messageSent = true;
+        } catch (error) {
+          this.logger.error("❌ PowerShell 执行失败:", error);
+          // 如果 PowerShell 失败，回退到 VS Code 命令方法
+          messageSent = await this.fallbackSendMethod(message);
         }
-      }
-
-      // 如果聊天界面打开成功且有消息要发送
-      if (chatOpened && message) {
-        console.log("聊天界面已打开，开始发送消息...");
-
-        // 等待聊天界面完全加载
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+      } else {
+        // Linux: 使用 xdotool 或回退方法
+        this.logger.debug("🎯 使用 Linux 方法发送消息");
 
         try {
-          // 方法1: 尝试直接在聊天输入框中输入
-          console.log("尝试直接输入消息...");
-          await commands.executeCommand("type", { text: message });
-          await new Promise((resolve) => setTimeout(resolve, 500));
+          const { exec } = require("child_process");
+          const { promisify } = require("util");
+          const execAsync = promisify(exec);
 
-          // 尝试发送消息 - 使用回车键
-          await commands.executeCommand("type", { text: "\n" });
-          console.log("消息已通过回车键发送");
-          return true;
-        } catch (directInputError) {
-          console.log("直接输入失败，尝试其他方式:", directInputError);
-
+          // 尝试使用 xdotool
           try {
-            // 方法2: 尝试使用editor.action.insertText命令
-            await commands.executeCommand("editor.action.insertText", {
-              text: message,
-            });
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            await commands.executeCommand("type", { text: "\n" });
-            console.log("消息已通过insertText发送");
-            return true;
-          } catch (insertTextError) {
-            console.log("insertText方式也失败:", insertTextError);
+            await execAsync("which xdotool", { timeout: 1000 });
 
-            try {
-              // 方法3: 尝试使用剪贴板 + 粘贴的方式
-              console.log("尝试使用剪贴板粘贴方式...");
-              await this.copyToClipboard(message);
-              await new Promise((resolve) => setTimeout(resolve, 300));
+            const xdotoolCommands = [
+              "sleep 0.3",
+              "xdotool key ctrl+a", // 全选
+              "sleep 0.1",
+              "xdotool key Delete", // 删除
+              "sleep 0.1",
+              "xdotool key ctrl+v", // 粘贴
+              "sleep 0.3",
+              "xdotool key Return", // 回车发送
+              "sleep 0.2",
+            ].join(" && ");
 
-              // 粘贴内容
-              await commands.executeCommand(
-                "editor.action.clipboardPasteAction"
-              );
-              await new Promise((resolve) => setTimeout(resolve, 500));
+            this.logger.debug("执行 xdotool 键盘模拟...");
+            await execAsync(xdotoolCommands);
 
-              // 发送消息
-              await commands.executeCommand("type", { text: "\n" });
-              console.log("消息已通过剪贴板粘贴方式发送");
-              return true;
-            } catch (pasteError) {
-              console.log("剪贴板粘贴方式也失败:", pasteError);
-            }
+            this.logger.debug("✅ xdotool 执行完成");
+            messageSent = true;
+          } catch (xdotoolError) {
+            this.logger.warn("⚠️ xdotool 不可用，使用回退方法");
+            messageSent = await this.fallbackSendMethod(message);
           }
+        } catch (error) {
+          this.logger.error("❌ Linux 方法执行失败:", error);
+          messageSent = await this.fallbackSendMethod(message);
         }
       }
 
-      // 如果只是打开聊天界面（没有消息要发送）
-      if (chatOpened) {
-        console.log("聊天界面已成功打开");
-        return true;
-      }
+      // 等待发送完成
+      await new Promise((resolve) => setTimeout(resolve, 800));
 
-      console.log("无法打开 Cursor Chat");
+      // 验证发送结果
+      if (messageSent) {
+        vscode.window.showInformationMessage(
+          `✅ 消息已发送到 Cursor Chat: "${message}"`
+        );
+        this.logger.debug("🎉 Cursor Chat 操作完成，消息发送成功");
+        return true;
+      } else {
+        vscode.window.showWarningMessage(
+          `⚠️ 自动发送失败，消息已复制到剪贴板，请手动粘贴并发送。消息内容: "${message}"`
+        );
+        this.logger.debug("⚠️ 自动发送失败，需要手动操作");
+        return false;
+      }
+    } catch (error) {
+      this.logger.error("❌ 打开 Cursor Chat 时发生错误:", error);
+      vscode.window.showErrorMessage(`❌ 打开 Cursor Chat 失败: ${error}`);
       return false;
-    } catch (error: unknown) {
-      console.error("打开 Cursor Chat 失败:", error);
-      throw error;
     }
   }
 
   /**
-   * 复制文本到剪贴板
+   * 回退发送方法 - 使用 VS Code 命令
    */
-  private async copyToClipboard(text: string): Promise<void> {
-    try {
-      const { exec } = require("child_process");
-      const escapedText = text.replace(/'/g, "'\"'\"'");
+  private async fallbackSendMethod(message: string): Promise<boolean> {
+    this.logger.debug("🔄 使用回退方法发送消息");
 
-      let command: string;
-      if (this.platform === "darwin") {
-        command = `echo '${escapedText}' | pbcopy`;
-      } else if (this.platform === "win32") {
-        command = `echo ${escapedText} | clip`;
-      } else {
-        command = `echo '${escapedText}' | xclip -selection clipboard`;
+    try {
+      // 尝试粘贴消息
+      await vscode.commands.executeCommand(
+        "editor.action.clipboardPasteAction"
+      );
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      this.logger.debug("✅ 回退方法: 消息粘贴完成");
+
+      // 多次尝试 Enter 键
+      for (let i = 0; i < 2; i++) {
+        try {
+          await vscode.commands.executeCommand("type", { text: "\n" });
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          this.logger.debug(`✅ 回退方法: Enter 键尝试 ${i + 1} 完成`);
+        } catch (error) {
+          this.logger.debug(`⚠️ 回退方法: Enter 键尝试 ${i + 1} 失败:`, error);
+        }
       }
 
-      await new Promise<void>((resolve, reject) => {
-        exec(command, (error: Error | null) => {
-          if (error) {
-            reject(error);
-          } else {
-            resolve();
-          }
-        });
-      });
-
-      console.log("文本已复制到剪贴板");
+      this.logger.debug("✅ 回退方法执行完成");
+      return true;
     } catch (error) {
-      console.error("复制到剪贴板失败:", error);
-      throw error;
+      this.logger.error("❌ 回退方法也失败:", error);
+      return false;
     }
   }
 
@@ -1468,8 +1449,8 @@ export class CursorIntegration {
   getSystemInfo(): SystemInfo {
     return {
       platform: this.platform,
-      version: process.version, // Node.js 版本
-      isLoggedIn: false, // 这里应该检查登录状态，暂时设为false
+      version: process.version,
+      isLoggedIn: false,
       cursorPath:
         this.configPaths.customInstallPath ||
         this.configPaths.cliPath ||
@@ -1482,78 +1463,83 @@ export class CursorIntegration {
   }
 }
 
-/**
- * 注册 Cursor 集成相关的命令
- */
-export const registerCursorIntegration = (context: ExtensionContext) => {
-  // 注册获取 Cursor 设置命令
+export const registerCursorIntegration = (context: any) => {
+  const { commands } = require("vscode");
+  const { showWebView } = require("../utils/webviewUtils");
+
+  // 创建 CursorIntegration 实例
+  const cursorIntegration = new CursorIntegration();
+
   context.subscriptions.push(
     commands.registerCommand("DiFlow.getCursorSettings", async () => {
       showWebView(context, {
         key: "main",
         title: "Cursor 管理",
         viewColumn: 1,
-        task: {
-          task: "route",
-          data: {
-            path: "/cursor",
-          },
-        },
+        task: { task: "route", data: { path: "/cursor" } },
       });
-    })
-  );
+    }),
 
-  // 注册更新 Cursor 设置命令
-  context.subscriptions.push(
-    commands.registerCommand("DiFlow.updateCursorSettings", async () => {
-      showWebView(context, {
-        key: "main",
-        title: "Cursor 管理",
-        viewColumn: 1,
-        task: {
-          task: "route",
-          data: {
-            path: "/cursor",
-          },
-        },
-      });
-    })
-  );
+    // 添加 openCursorChat 命令注册
+    commands.registerCommand(
+      "DiFlow.openCursorChat",
+      async (message?: string) => {
+        try {
+          // 如果没有提供消息，提示用户输入
+          let chatMessage = message;
+          if (!chatMessage) {
+            const vscode = require("vscode");
+            chatMessage = await vscode.window.showInputBox({
+              prompt: "请输入要发送到 Cursor Chat 的消息",
+              placeHolder: "输入您的消息...",
+            });
 
-  // 注册打开 Cursor 对话命令
-  context.subscriptions.push(
-    commands.registerCommand("DiFlow.openCursorChat", async () => {
-      showWebView(context, {
-        key: "main",
-        title: "Cursor 管理",
-        viewColumn: 1,
-        task: {
-          task: "route",
-          data: {
-            path: "/cursor",
-          },
-        },
-      });
-    })
+            if (!chatMessage) {
+              vscode.window.showInformationMessage("已取消发送消息");
+              return;
+            }
+          }
+
+          console.log("发送消息到 Cursor Chat...", { message: chatMessage });
+
+          // 默认启用自动发送功能
+          const result = await cursorIntegration.openCursorChat(chatMessage);
+
+          console.log("发送消息到 Cursor Chat 结果:", result);
+
+          if (result) {
+            const vscode = require("vscode");
+            vscode.window.showInformationMessage("Cursor Chat 操作已完成");
+          } else {
+            const vscode = require("vscode");
+            vscode.window.showWarningMessage(
+              "无法完成 Cursor Chat 操作，请确保在 Cursor 环境中运行"
+            );
+          }
+        } catch (error) {
+          const vscode = require("vscode");
+          vscode.window.showErrorMessage(
+            `Cursor Chat 操作失败: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+        }
+      }
+    )
   );
 };
 
-/**
- * 注册 Cursor 管理命令 - 打开独立的 webview 窗口
- */
-export const registerCursorManagement = (context: ExtensionContext) => {
+export const registerCursorManagement = (context: any) => {
+  const { commands } = require("vscode");
+  const { showWebView } = require("../utils/webviewUtils");
+
   context.subscriptions.push(
     commands.registerCommand("DiFlow.cursorManagement", async () => {
       showWebView(context, {
         key: "cursor",
         title: "Cursor 管理",
         viewColumn: 1,
-        task: {
-          task: "route",
-          data: {
-            path: "/cursor",
-          },
-        },
+        task: { task: "route", data: { path: "/cursor" } },
       });
     })
   );

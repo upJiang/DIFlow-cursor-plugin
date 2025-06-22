@@ -51,6 +51,7 @@
 
 <script setup lang="ts">
 import { CommentOutlined, MessageOutlined } from "@ant-design/icons-vue";
+import { withDefaults } from "vue";
 
 interface Props {
   chatMessage: string;
@@ -61,7 +62,14 @@ interface Props {
   };
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  chatMessage: "",
+  loading: () => ({
+    chat: false,
+    openChat: false,
+    openCursor: false,
+  }),
+});
 
 defineEmits<{
   sendToChat: [];
