@@ -17,6 +17,62 @@ export interface McpResponse {
 }
 
 /**
+ * JSON 配置相关接口定义
+ */
+export interface McpConfigJsonResponse {
+  mcpConfig: Record<string, McpServerItem>;
+}
+
+export interface BatchUpdateMcpConfigRequest {
+  mcpConfig: Record<string, McpServerItem>;
+}
+
+export interface BatchUpdateMcpConfigResponse {
+  success: boolean;
+  message: string;
+  count: number;
+}
+
+export interface ShareMcpConfigRequest {
+  title: string;
+  description?: string;
+  mcpConfig?: Record<string, McpServerItem>;
+}
+
+export interface ShareMcpConfigResponse {
+  success: boolean;
+  message: string;
+  shareId: string;
+}
+
+export interface SharedMcpConfig {
+  shareId: string;
+  title: string;
+  description?: string;
+  creatorEmail: string;
+  usageCount: number;
+  mcpConfig: Record<string, McpServerItem>;
+}
+
+export interface GetMcpConfigByShareIdResponse {
+  success: boolean;
+  message: string;
+  data: SharedMcpConfig;
+}
+
+export interface AddMcpByShareIdRequest {
+  shareId: string;
+}
+
+export interface AddMcpByShareIdResponse {
+  success: boolean;
+  message: string;
+  data: {
+    count: number;
+  };
+}
+
+/**
  * MCP服务器相关API
  */
 export const mcpApi = {
@@ -92,5 +148,142 @@ export const mcpApi = {
     serverId: number,
   ): Promise<{ success: boolean; message: string }> => {
     return mcpApi.deleteMcpServer(serverId);
+  },
+
+  /**
+   * 获取MCP配置JSON格式
+   * @returns Promise<McpConfigJsonResponse>
+   */
+  getMcpConfigJson: async (): Promise<McpConfigJsonResponse> => {
+    const response = await httpRequest("GET", "/cursor/mcps/json");
+    return response.data as McpConfigJsonResponse;
+  },
+
+  /**
+   * 批量更新MCP配置
+   * @param mcpConfig MCP配置对象
+   * @returns Promise<BatchUpdateMcpConfigResponse>
+   */
+  batchUpdateMcpConfig: async (
+    mcpConfig: Record<string, McpServerItem>,
+  ): Promise<BatchUpdateMcpConfigResponse> => {
+    const response = await httpRequest("PUT", "/cursor/mcps/batch", {
+      mcpConfig,
+    });
+    return response.data as BatchUpdateMcpConfigResponse;
+  },
+
+  /**
+   * 分享MCP配置
+   * @param mcpConfig MCP配置对象
+   * @returns Promise<ShareMcpConfigResponse>
+   */
+  shareMcpConfig: async (
+    title: string,
+    description?: string,
+    mcpConfig?: Record<string, McpServerItem>,
+  ): Promise<ShareMcpConfigResponse> => {
+    const response = await httpRequest("POST", "/cursor/mcps/share", {
+      title: title || "MCP配置分享",
+      description: description || "用户分享的MCP配置",
+      mcpConfig,
+    });
+
+    // 处理服务端响应格式
+    if (response.data && typeof response.data === "object") {
+      const serverResponse = response.data as {
+        code: number;
+        message: string;
+        data?: { shareId: string };
+      };
+
+      if (serverResponse.code === 201 && serverResponse.data) {
+        return {
+          success: true,
+          message: serverResponse.message || "分享成功",
+          shareId: serverResponse.data.shareId,
+        };
+      } else {
+        return {
+          success: false,
+          message: serverResponse.message || "分享失败",
+          shareId: "",
+        };
+      }
+    }
+
+    return {
+      success: false,
+      message: "响应格式错误",
+      shareId: "",
+    };
+  },
+
+  /**
+   * 通过分享ID获取MCP配置
+   * @param shareId 分享ID
+   * @returns Promise<GetMcpConfigByShareIdResponse>
+   */
+  getMcpConfigByShareId: async (
+    shareId: string,
+  ): Promise<GetMcpConfigByShareIdResponse> => {
+    const response = await httpRequest("GET", `/cursor/mcps/share/${shareId}`);
+
+    // 处理服务端响应格式
+    if (response.data && typeof response.data === "object") {
+      const serverResponse = response.data as {
+        code: number;
+        message: string;
+        data?: {
+          shareId: string;
+          title: string;
+          description?: string;
+          creatorEmail: string;
+          usageCount: number;
+          mcpConfig: Record<string, McpServerItem>;
+        };
+      };
+
+      if (serverResponse.code === 200 && serverResponse.data) {
+        return {
+          success: true,
+          message: serverResponse.message || "获取成功",
+          data: {
+            shareId: serverResponse.data.shareId,
+            title: serverResponse.data.title,
+            description: serverResponse.data.description,
+            creatorEmail: serverResponse.data.creatorEmail,
+            usageCount: serverResponse.data.usageCount,
+            mcpConfig: serverResponse.data.mcpConfig,
+          },
+        };
+      } else {
+        return {
+          success: false,
+          message: serverResponse.message || "获取失败",
+          data: {} as SharedMcpConfig,
+        };
+      }
+    }
+
+    return {
+      success: false,
+      message: "响应格式错误",
+      data: {} as SharedMcpConfig,
+    };
+  },
+
+  /**
+   * 通过分享ID添加MCP配置
+   * @param shareId 分享ID
+   * @returns Promise<AddMcpByShareIdResponse>
+   */
+  addMcpByShareId: async (
+    shareId: string,
+  ): Promise<AddMcpByShareIdResponse> => {
+    const response = await httpRequest("POST", "/cursor/mcps/add-by-share", {
+      shareId,
+    });
+    return response.data as AddMcpByShareIdResponse;
   },
 };

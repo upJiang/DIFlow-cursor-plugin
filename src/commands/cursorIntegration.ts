@@ -178,44 +178,88 @@ export class CursorIntegration {
     const homeDir = os.homedir();
 
     // Cursor MCP 配置文件的正确路径
-    const cursorMcpPath = path.join(homeDir, ".cursor", "mcp.json");
-    console.log("检查 Cursor MCP 配置路径:", cursorMcpPath);
+    let cursorMcpPaths: string[] = [];
 
-    if (fs.existsSync(cursorMcpPath)) {
-      console.log("找到 Cursor MCP 配置文件:", cursorMcpPath);
-      return cursorMcpPath;
+    if (this.platform === "darwin") {
+      // macOS 路径 - 优先查找专门的MCP配置文件
+      cursorMcpPaths = [
+        path.join(homeDir, ".cursor", "mcp.json"), // 专门的MCP配置文件
+        path.join(homeDir, "mcp.json"), // 用户根目录的MCP配置
+        path.join(
+          homeDir,
+          "Library",
+          "Application Support",
+          "Cursor",
+          "User",
+          "globalStorage",
+          "rooveterinaryinc.cursor-mcp",
+          "settings.json"
+        ),
+        path.join(
+          homeDir,
+          "Library",
+          "Application Support",
+          "Cursor",
+          "User",
+          "settings.json"
+        ),
+      ];
+    } else if (this.platform === "win32") {
+      // Windows 路径 - 优先查找专门的MCP配置文件
+      cursorMcpPaths = [
+        path.join(homeDir, ".cursor", "mcp.json"), // 专门的MCP配置文件
+        path.join(homeDir, "mcp.json"), // 用户根目录的MCP配置
+        path.join(
+          homeDir,
+          "AppData",
+          "Roaming",
+          "Cursor",
+          "User",
+          "globalStorage",
+          "rooveterinaryinc.cursor-mcp",
+          "settings.json"
+        ),
+        path.join(
+          homeDir,
+          "AppData",
+          "Roaming",
+          "Cursor",
+          "User",
+          "settings.json"
+        ),
+      ];
+    } else {
+      // Linux 路径 - 优先查找专门的MCP配置文件
+      cursorMcpPaths = [
+        path.join(homeDir, ".cursor", "mcp.json"), // 专门的MCP配置文件
+        path.join(homeDir, "mcp.json"), // 用户根目录的MCP配置
+        path.join(
+          homeDir,
+          ".config",
+          "Cursor",
+          "User",
+          "globalStorage",
+          "rooveterinaryinc.cursor-mcp",
+          "settings.json"
+        ),
+        path.join(homeDir, ".config", "Cursor", "User", "settings.json"),
+      ];
     }
 
-    // 备用路径：检查用户目录下的其他可能位置
-    const alternativePaths = [
-      // 用户目录下的 mcp.json
-      path.join(homeDir, "mcp.json"),
-      // VS Code 用户目录下的 mcp.json
-      path.join(
-        homeDir,
-        "Library",
-        "Application Support",
-        "Cursor",
-        "User",
-        "mcp.json"
-      ),
-      path.join(homeDir, "AppData", "Roaming", "Cursor", "User", "mcp.json"),
-      path.join(homeDir, ".config", "Cursor", "User", "mcp.json"),
-    ];
+    console.log("检查 Cursor MCP 配置路径:", cursorMcpPaths);
 
-    console.log("检查备用 MCP 配置路径:", alternativePaths);
-
-    for (const mcpPath of alternativePaths) {
-      console.log("检查备用 MCP 路径:", mcpPath);
+    for (const mcpPath of cursorMcpPaths) {
+      console.log("检查 MCP 路径:", mcpPath);
       if (fs.existsSync(mcpPath)) {
-        console.log("找到备用 MCP 配置文件:", mcpPath);
+        console.log("找到 MCP 配置文件:", mcpPath);
         return mcpPath;
       }
     }
 
-    // 如果没有找到现有文件，返回默认的 ~/.cursor/mcp.json 路径
-    console.log("使用默认 MCP 配置路径:", cursorMcpPath);
-    return cursorMcpPath;
+    // 如果没有找到现有文件，返回专门的MCP配置文件路径作为默认值
+    const defaultPath = cursorMcpPaths[0]; // 使用 .cursor/mcp.json 作为默认路径
+    console.log("使用默认 MCP 配置路径:", defaultPath);
+    return defaultPath;
   }
 
   /**
@@ -1056,25 +1100,105 @@ export class CursorIntegration {
       const mcpPath = this.configPaths.mcpPath;
       console.log("获取 MCP 服务器 - 使用路径:", mcpPath);
 
-      if (!mcpPath || !fs.existsSync(mcpPath)) {
-        console.log("MCP configuration file not found:", mcpPath);
+      if (!mcpPath) {
+        console.log("MCP 配置路径未找到");
+        return {};
+      }
+
+      // 如果配置文件不存在，创建一个空的配置文件
+      if (!fs.existsSync(mcpPath)) {
+        console.log("MCP 配置文件不存在，创建空配置:", mcpPath);
+        try {
+          // 确保目录存在
+          const mcpDir = path.dirname(mcpPath);
+          if (!fs.existsSync(mcpDir)) {
+            fs.mkdirSync(mcpDir, { recursive: true });
+          }
+
+          // 创建空的MCP配置
+          const emptyConfig = { mcpServers: {} };
+          fs.writeFileSync(
+            mcpPath,
+            JSON.stringify(emptyConfig, null, 2),
+            "utf8"
+          );
+          console.log("已创建空的 MCP 配置文件");
+        } catch (createError) {
+          console.error("创建 MCP 配置文件失败:", createError);
+        }
         return {};
       }
 
       const content = fs.readFileSync(mcpPath, "utf8");
-      const config = JSON.parse(content) as {
-        mcpServers?: Record<string, McpServerConfig>;
-      };
+      let config: any;
+
+      try {
+        config = JSON.parse(content);
+      } catch (parseError) {
+        console.error("MCP 配置文件 JSON 解析失败:", parseError);
+        return {};
+      }
 
       console.log("MCP 配置内容:", config);
 
-      // 确保返回正确的 MCP 服务器配置
-      if (config.mcpServers) {
-        return config.mcpServers;
+      // 处理不同的配置文件格式
+      let mcpServers: Record<string, McpServerConfig> = {};
+
+      // 格式1: 直接的 mcpServers 对象
+      if (config.mcpServers && typeof config.mcpServers === "object") {
+        mcpServers = config.mcpServers;
+      }
+      // 格式2: 嵌套在其他结构中
+      else if (config.mcp && config.mcp.mcpServers) {
+        mcpServers = config.mcp.mcpServers;
+      }
+      // 格式3: 可能是 Cursor settings.json 格式
+      else if (config["mcp.mcpServers"]) {
+        mcpServers = config["mcp.mcpServers"];
+      }
+      // 格式4: 直接就是服务器配置对象
+      else if (typeof config === "object" && !Array.isArray(config)) {
+        // 检查是否所有键都像是服务器配置
+        const isServerConfig = Object.values(config).every(
+          (value) => value && typeof value === "object" && "command" in value
+        );
+        if (isServerConfig) {
+          mcpServers = config;
+        }
       }
 
-      // 如果没有 mcpServers 字段，返回空对象
-      return {};
+      // 过滤掉无效的配置项
+      const validServers: Record<string, McpServerConfig> = {};
+
+      for (const [name, serverConfig] of Object.entries(mcpServers)) {
+        // 跳过空键名或无效配置
+        if (
+          !name ||
+          name.trim() === "" ||
+          !serverConfig ||
+          typeof serverConfig !== "object"
+        ) {
+          console.log("跳过无效的 MCP 服务器配置:", { name, serverConfig });
+          continue;
+        }
+
+        // 确保配置有必需的字段
+        if (!serverConfig.command) {
+          console.log("跳过缺少 command 字段的 MCP 服务器:", name);
+          continue;
+        }
+
+        // 标准化配置格式
+        validServers[name] = {
+          ...serverConfig, // 先展开原配置
+          command: serverConfig.command, // 确保command字段存在
+          args: serverConfig.args || [],
+          env: serverConfig.env || {},
+        };
+      }
+
+      console.log("有效的 MCP 服务器配置:", validServers);
+      return validServers;
     } catch (error) {
       console.error("Error reading MCP configuration:", error);
       return {};
@@ -1460,6 +1584,102 @@ export class CursorIntegration {
       rulesPath: this.configPaths.rulesPath || "未找到",
       cliPath: this.configPaths.cliPath || "未找到",
     };
+  }
+
+  /**
+   * 获取 MCP 配置 JSON 格式
+   * 注意：此方法应该通过 webview 任务处理器调用，不直接在这里实现API调用
+   */
+  async getMcpConfigJson(): Promise<{
+    mcpConfig: Record<string, McpServerConfig>;
+  }> {
+    try {
+      // 直接返回本地配置，API调用应该在webview任务处理器中进行
+      const mcpServers = await this.getMcpServers();
+      return { mcpConfig: mcpServers };
+    } catch (error) {
+      console.error("获取 MCP 配置 JSON 失败:", error);
+      // 返回空配置而不是抛出错误
+      return { mcpConfig: {} };
+    }
+  }
+
+  /**
+   * 批量更新 MCP 配置
+   * 注意：此方法应该通过 webview 任务处理器调用，不直接在这里实现API调用
+   */
+  async batchUpdateMcpConfig(
+    mcpConfig: Record<string, McpServerConfig>
+  ): Promise<{ count: number }> {
+    try {
+      const mcpPath = this.configPaths.mcpPath;
+      if (!mcpPath) {
+        throw new Error("未找到 MCP 配置文件路径");
+      }
+
+      // 读取现有配置
+      let existingConfig = {};
+      if (fs.existsSync(mcpPath)) {
+        const configContent = fs.readFileSync(mcpPath, "utf8");
+        existingConfig = JSON.parse(configContent);
+      }
+
+      // 更新配置
+      const updatedConfig = {
+        ...existingConfig,
+        mcpServers: mcpConfig,
+      };
+
+      // 写入文件
+      fs.writeFileSync(mcpPath, JSON.stringify(updatedConfig, null, 2), "utf8");
+
+      const count = Object.keys(mcpConfig).length;
+      console.log(`成功批量更新 ${count} 个 MCP 配置`);
+      return { count };
+    } catch (error) {
+      console.error("批量更新 MCP 配置失败:", error);
+      throw new Error("批量更新 MCP 配置失败");
+    }
+  }
+
+  /**
+   * 分享 MCP 配置
+   * 注意：此方法仅用于webview任务处理器，实际API调用在任务处理器中进行
+   */
+  async shareMcpConfig(
+    title: string,
+    description?: string,
+    mcpConfig?: Record<string, McpServerConfig>
+  ): Promise<{ shareId: string }> {
+    // 这个方法不应该直接调用，应该通过webview任务处理器
+    throw new Error("此方法应该通过webview任务处理器调用");
+  }
+
+  /**
+   * 通过分享ID获取 MCP 配置
+   * 注意：此方法仅用于webview任务处理器，实际API调用在任务处理器中进行
+   */
+  async getMcpConfigByShareId(shareId: string): Promise<{
+    shareId: string;
+    title: string;
+    description?: string;
+    creatorEmail: string;
+    usageCount: number;
+    mcpConfig: Record<string, McpServerConfig>;
+  }> {
+    // 这个方法不应该直接调用，应该通过webview任务处理器
+    throw new Error("此方法应该通过webview任务处理器调用");
+  }
+
+  /**
+   * 通过分享ID添加 MCP 配置
+   * 注意：此方法仅用于webview任务处理器，实际API调用在任务处理器中进行
+   */
+  async addMcpByShareId(
+    shareId: string
+  ): Promise<{ data: { count: number }; message: string }> {
+    // 这个方法不应该直接调用，应该通过webview任务处理器
+    throw new Error("此方法应该通过webview任务处理器调用");
   }
 }
 

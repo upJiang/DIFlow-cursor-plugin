@@ -30,7 +30,12 @@ type Tasks =
   | "syncRulesToServer"
   | "syncMcpsToServer"
   | "networkRequest"
-  | "proxyRequest";
+  | "proxyRequest"
+  | "getMcpConfigJson"
+  | "batchUpdateMcpConfig"
+  | "shareMcpConfig"
+  | "getMcpConfigByShareId"
+  | "addMcpByShareId";
 
 // 当前的webview列表
 let webviewPanelList: {
@@ -1390,3 +1395,232 @@ taskMap.proxyRequest = async (
     }
   }
 };
+
+// MCP 配置 JSON 管理
+taskMap["cursor:getMcpConfigJson"] = async (
+  context: vscode.ExtensionContext,
+  message: TaskMessage
+) => {
+  try {
+    console.log("=== 开始获取 MCP 配置 JSON ===");
+    console.log("消息数据:", message);
+
+    // 直接获取本地配置，API调用由前端通过httpUtils处理
+    console.log("调用 cursorIntegration.getMcpConfigJson()...");
+    const result = await cursorIntegration.getMcpConfigJson();
+    console.log("获取 MCP 配置 JSON 结果:", result);
+    console.log("配置项数量:", Object.keys(result.mcpConfig || {}).length);
+
+    // 发送结果回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    console.log("找到的 webview panels:", panels.length);
+
+    if (panels.length > 0 && message.cbid) {
+      console.log("发送成功响应到 webview, cbid:", message.cbid);
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: true,
+          data: result,
+        },
+      });
+      console.log("✅ 成功发送响应到 webview");
+    } else {
+      console.error("❌ 没有找到对应的 webview panel 或缺少 cbid");
+      console.log("panels.length:", panels.length);
+      console.log("message.cbid:", message.cbid);
+    }
+  } catch (error: unknown) {
+    console.error("❌ getMcpConfigJson task failed:", error);
+
+    // 发送错误回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      console.log("发送错误响应到 webview, cbid:", message.cbid);
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+    }
+  }
+};
+
+taskMap["cursor:batchUpdateMcpConfig"] = async (
+  context: vscode.ExtensionContext,
+  message: TaskMessage
+) => {
+  try {
+    console.log("批量更新 MCP 配置...", message.data);
+    const data = message.data as { mcpConfig: Record<string, any> };
+
+    // 更新本地配置
+    const result = await cursorIntegration.batchUpdateMcpConfig(data.mcpConfig);
+    console.log("批量更新 MCP 配置结果:", result);
+
+    // 发送结果回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: true,
+          data: result,
+        },
+      });
+    }
+  } catch (error: unknown) {
+    console.error("batchUpdateMcpConfig task failed:", error);
+    // 发送错误回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+    }
+  }
+};
+
+taskMap["cursor:shareMcpConfig"] = async (
+  context: vscode.ExtensionContext,
+  message: TaskMessage
+) => {
+  try {
+    console.log("分享 MCP 配置...", message.data);
+
+    // 这个任务应该由前端通过httpUtils调用后端API
+    // 这里只是一个占位符，实际的API调用在前端进行
+
+    // 发送结果回 webview，告诉前端需要调用API
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: "此功能需要通过前端httpUtils调用后端API",
+        },
+      });
+    }
+  } catch (error: unknown) {
+    console.error("shareMcpConfig task failed:", error);
+    // 发送错误回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+    }
+  }
+};
+
+taskMap["cursor:getMcpConfigByShareId"] = async (
+  context: vscode.ExtensionContext,
+  message: TaskMessage
+) => {
+  try {
+    console.log("获取分享配置...", message.data);
+
+    // 这个任务应该由前端通过httpUtils调用后端API
+    // 这里只是一个占位符，实际的API调用在前端进行
+
+    // 发送结果回 webview，告诉前端需要调用API
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: "此功能需要通过前端httpUtils调用后端API",
+        },
+      });
+    }
+  } catch (error: unknown) {
+    console.error("getMcpConfigByShareId task failed:", error);
+    // 发送错误回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+    }
+  }
+};
+
+taskMap["cursor:addMcpByShareId"] = async (
+  context: vscode.ExtensionContext,
+  message: TaskMessage
+) => {
+  try {
+    console.log("通过分享 ID 添加配置...", message.data);
+
+    // 这个任务应该由前端通过httpUtils调用后端API
+    // 这里只是一个占位符，实际的API调用在前端进行
+
+    // 发送结果回 webview，告诉前端需要调用API
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: "此功能需要通过前端httpUtils调用后端API",
+        },
+      });
+    }
+  } catch (error: unknown) {
+    console.error("addMcpByShareId task failed:", error);
+    // 发送错误回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+    }
+  }
+};
+
+// 辅助函数：获取存储的token
+async function getStoredToken(): Promise<string> {
+  // 这里需要从VS Code的存储中获取token
+  // 暂时返回空字符串，实际应该从context.globalState或其他地方获取
+  return "";
+}

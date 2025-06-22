@@ -12,6 +12,39 @@ function isWebviewEnvironment(): boolean {
 }
 
 /**
+ * 深度克隆并清理数据，确保可序列化
+ */
+function sanitizeData(data: unknown): unknown {
+  if (data === null || data === undefined) {
+    return data;
+  }
+
+  if (typeof data === "function") {
+    return undefined;
+  }
+
+  if (typeof data === "object") {
+    if (Array.isArray(data)) {
+      return data.map(sanitizeData).filter((item) => item !== undefined);
+    }
+
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(
+      data as Record<string, unknown>,
+    )) {
+      const sanitizedValue = sanitizeData(value);
+      if (sanitizedValue !== undefined) {
+        sanitized[key] = sanitizedValue;
+      }
+    }
+    return sanitized;
+  }
+
+  // 基本类型直接返回
+  return data;
+}
+
+/**
  * 通用网络请求函数
  * 自动处理token认证，无需手动传入token参数
  */
@@ -44,6 +77,9 @@ export const httpRequest = async (
       );
     }
 
+    // 清理数据，确保可序列化
+    const sanitizedData = data ? sanitizeData(data) : undefined;
+
     // 在webview环境中使用VS Code扩展代理
     if (isWebviewEnvironment()) {
       console.log("使用VS Code扩展代理发送请求");
@@ -51,7 +87,7 @@ export const httpRequest = async (
       const result = await sendTaskToVscode("proxyRequest", {
         method,
         url: fullUrl,
-        data,
+        data: sanitizedData,
         headers: mergedHeaders,
       });
 

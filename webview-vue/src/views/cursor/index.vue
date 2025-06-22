@@ -50,11 +50,9 @@
 
         <McpManagement
           v-else-if="item.key === 'mcp'"
-          :user-info="userInfo"
+          :servers="mcpServers"
           :loading="loading"
-          :mcp-servers="mcpServers"
-          @load-servers="loadMcpServers"
-          @show-add-modal="showAddMcpModal"
+          @update="loadMcpServers"
           @remove-server="removeMcpServer"
         />
 
@@ -481,15 +479,6 @@ const loadMcpServers = async () => {
   } finally {
     loading.mcp = false;
   }
-};
-
-const showAddMcpModal = () => {
-  // 重置表单
-  newMcpServer.name = "";
-  newMcpServer.command = "";
-  newMcpServer.argsText = "";
-  newMcpServer.envText = "";
-  showMcpModal.value = true;
 };
 
 const handleAddMcpServer = async () => {
