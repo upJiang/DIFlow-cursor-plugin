@@ -35,15 +35,22 @@ export function sendTaskToVscode(task: string, data?: any): Promise<any> {
 
     // 存储回调函数
     callbacks[cbid] = (responseData: any) => {
-      if (responseData.success) {
-        resolve(responseData.data);
+      console.log(`任务 ${task} 响应数据:`, responseData);
+
+      // 处理后端返回的标准格式 { success: true, data: actualData, error: null }
+      if (responseData && responseData.success !== false) {
+        // 如果返回数据有 data 字段，返回实际数据；否则返回整个响应
+        const actualData =
+          responseData.data !== undefined ? responseData.data : responseData;
+        resolve(actualData);
       } else {
-        reject(new Error(responseData.error || "任务执行失败"));
+        reject(new Error(responseData?.error || "任务执行失败"));
       }
     };
 
     // 发送消息
     if (window.vscode) {
+      console.log(`发送任务 ${task}:`, data);
       window.vscode.postMessage({
         cmd: task,
         cbid: cbid,

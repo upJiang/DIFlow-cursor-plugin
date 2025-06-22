@@ -1283,30 +1283,330 @@ export class CursorIntegration {
   }
 
   /**
-   * 更新用户规则
+   * 获取项目中的 .cursor/rules/ 目录下的所有规则文件
    */
-  async updateUserRules(rules: string): Promise<boolean> {
+  async getProjectCursorRules(): Promise<{
+    success: boolean;
+    rules: Array<{
+      name: string;
+      path: string;
+      content: string;
+      metadata?: {
+        description?: string;
+        globs?: string;
+        alwaysApply?: boolean;
+      };
+    }>;
+    error?: string;
+  }> {
     try {
-      const rulesPath = this.findRulesPath();
-      if (!rulesPath) {
-        console.error("Rules path not found");
-        return false;
+      console.log("开始获取项目 .cursor/rules/ 目录下的规则文件...");
+
+      // 获取当前工作区路径
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        console.log("未找到工作区文件夹");
+        return {
+          success: true,
+          rules: [],
+        };
       }
 
-      // 确保目录存在
-      const rulesDir = path.dirname(rulesPath);
-      if (!fs.existsSync(rulesDir)) {
-        fs.mkdirSync(rulesDir, { recursive: true });
+      const workspaceRoot = workspaceFolders[0].uri.fsPath;
+      const cursorRulesDir = path.join(workspaceRoot, ".cursor", "rules");
+
+      console.log("工作区路径:", workspaceRoot);
+      console.log("检查规则目录:", cursorRulesDir);
+
+      if (!fs.existsSync(cursorRulesDir)) {
+        console.log("项目中不存在 .cursor/rules/ 目录");
+        return {
+          success: true,
+          rules: [],
+        };
       }
 
-      // 保存为纯文本格式
-      fs.writeFileSync(rulesPath, rules, "utf8");
-      console.log("规则已保存到:", rulesPath);
+      // 读取目录下的所有 .mdc 文件
+      const files = fs.readdirSync(cursorRulesDir);
+      const mdcFiles = files.filter((file) => file.endsWith(".mdc"));
 
-      return true;
+      console.log("找到的 .mdc 文件:", mdcFiles);
+
+      const rules: Array<{
+        name: string;
+        path: string;
+        content: string;
+        metadata?: {
+          description?: string;
+          globs?: string;
+          alwaysApply?: boolean;
+        };
+      }> = [];
+
+      for (const file of mdcFiles) {
+        const filePath = path.join(cursorRulesDir, file);
+        const content = fs.readFileSync(filePath, "utf8");
+
+        // 解析文件前缀的元数据
+        let metadata: {
+          description?: string;
+          globs?: string;
+          alwaysApply?: boolean;
+        } = {};
+        let actualContent = content;
+
+        if (content.startsWith("---\n")) {
+          const endIndex = content.indexOf("\n---\n");
+          if (endIndex > 0) {
+            const frontMatter = content.substring(4, endIndex);
+            actualContent = content.substring(endIndex + 5);
+
+            // 改进的 YAML 前缀解析
+            try {
+              const lines = frontMatter.split("\n");
+              for (const line of lines) {
+                const colonIndex = line.indexOf(":");
+                if (colonIndex > 0) {
+                  const key = line.substring(0, colonIndex).trim();
+                  let value = line.substring(colonIndex + 1).trim();
+
+                  // 处理引号和空值
+                  if (value.startsWith('"') && value.endsWith('"')) {
+                    value = value.slice(1, -1);
+                  } else if (value.startsWith("'") && value.endsWith("'")) {
+                    value = value.slice(1, -1);
+                  }
+
+                  // 只在值不为空时设置
+                  if (value && value !== "") {
+                    if (key === "alwaysApply") {
+                      metadata.alwaysApply = value === "true";
+                    } else if (key === "description") {
+                      metadata.description = value;
+                    } else if (key === "globs") {
+                      metadata.globs = value;
+                    }
+                  }
+                }
+              }
+            } catch (parseError) {
+              console.warn("解析文件元数据失败:", parseError);
+            }
+          }
+        }
+
+        rules.push({
+          name: file.replace(".mdc", ""),
+          path: filePath,
+          content: actualContent.trim(),
+          metadata,
+        });
+
+        console.log(`解析规则文件 ${file}:`, {
+          name: file.replace(".mdc", ""),
+          contentLength: actualContent.trim().length,
+          metadata,
+        });
+      }
+
+      console.log(`成功读取 ${rules.length} 个规则文件`);
+
+      return {
+        success: true,
+        rules,
+      };
     } catch (error) {
-      console.error("Error updating user rules:", error);
-      return false;
+      console.error("获取项目规则文件失败:", error);
+      return {
+        success: false,
+        rules: [],
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * 获取 Cursor settings.json 中的用户规则
+   */
+  async getCursorSettingsUserRule(): Promise<{
+    success: boolean;
+    userRule?: string;
+    error?: string;
+  }> {
+    try {
+      console.log("🚀 开始获取 Cursor 用户规则...");
+
+      let userRule = "";
+
+      // 直接使用系统 sqlite3 命令查询数据库
+      try {
+        const { execSync } = require("child_process");
+        const dbPath = path.join(
+          os.homedir(),
+          "Library",
+          "Application Support",
+          "Cursor",
+          "User",
+          "globalStorage",
+          "state.vscdb"
+        );
+
+        console.log("📁 数据库路径:", dbPath);
+
+        if (fs.existsSync(dbPath)) {
+          console.log("✅ 数据库文件存在");
+
+          // 使用 sqlite3 命令行工具直接查询
+          console.log("🔍 执行 sqlite3 命令查询...");
+          const queryResult = execSync(
+            `sqlite3 "${dbPath}" "SELECT value FROM ItemTable WHERE key = 'aicontext.personalContext';"`,
+            { encoding: "utf8", timeout: 10000 }
+          );
+
+          console.log("📝 sqlite3 命令执行完成");
+          console.log("📊 查询结果长度:", queryResult.length);
+
+          if (queryResult && queryResult.trim()) {
+            const trimmedResult = queryResult.trim();
+            console.log("✅ 从数据库找到用户规则，长度:", trimmedResult.length);
+            console.log(
+              "✅ 用户规则内容预览:",
+              trimmedResult.substring(0, 200) + "..."
+            );
+            userRule = trimmedResult;
+          } else {
+            console.log("⚠️ 数据库查询返回空结果");
+          }
+        } else {
+          console.log("❌ 数据库文件不存在:", dbPath);
+        }
+      } catch (dbError) {
+        console.log("❌ 数据库查询失败:", dbError);
+      }
+
+      // 2. 如果数据库中没有找到，尝试从 settings.json 中搜索
+      if (
+        !userRule &&
+        this.configPaths.settingsPath &&
+        fs.existsSync(this.configPaths.settingsPath)
+      ) {
+        console.log("🔍 尝试从 settings.json 搜索用户规则...");
+
+        const settingsContent = fs.readFileSync(
+          this.configPaths.settingsPath,
+          "utf-8"
+        );
+        const settings = JSON.parse(settingsContent);
+
+        // 查找可能的用户规则字段
+        const possibleRuleFields = [
+          "cursor.rules.userRule",
+          "cursor.userRule",
+          "cursor.rules.user",
+          "cursor.chat.userRule",
+          "cursor.ai.userRule",
+          "cursor.composer.userRule",
+          "cursor.rules.global",
+          "cursor.globalRules",
+          "userRule",
+          "rules.user",
+          "rules.global",
+          "globalRules",
+          "cursor.rules",
+          "rules",
+        ];
+
+        for (const field of possibleRuleFields) {
+          const value = this.getNestedValue(settings, field);
+          if (value && typeof value === "string" && value.trim() !== "") {
+            userRule = value;
+            console.log(
+              `✅ 在字段 '${field}' 中找到用户规则，长度: ${value.length}`
+            );
+            break;
+          }
+        }
+      }
+
+      console.log("🎯 最终用户规则结果:", {
+        found: !!userRule,
+        length: userRule.length,
+        preview:
+          userRule.length > 0
+            ? userRule.substring(0, 100) + (userRule.length > 100 ? "..." : "")
+            : "无内容",
+      });
+
+      return {
+        success: true,
+        userRule,
+      };
+    } catch (error) {
+      console.error("❌ 获取 Cursor 用户规则失败:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * 获取嵌套对象的值
+   */
+  private getNestedValue(obj: any, path: string): any {
+    return path.split(".").reduce((current, key) => {
+      return current && current[key] !== undefined ? current[key] : undefined;
+    }, obj);
+  }
+
+  /**
+   * 获取综合的规则信息
+   */
+  async getAllRulesInfo(): Promise<{
+    success: boolean;
+    data: {
+      cursorrules: string; // .cursorrules 文件内容
+      projectRules: Array<{
+        name: string;
+        path: string;
+        content: string;
+        metadata?: any;
+      }>; // 项目 .cursor/rules/ 目录下的规则
+      cursorUserRule: string; // Cursor settings.json 中的用户规则
+    };
+    error?: string;
+  }> {
+    try {
+      console.log("开始获取所有规则信息...");
+
+      // 并行获取所有规则
+      const [cursorrules, projectRules, cursorUserRule] = await Promise.all([
+        this.getUserRules(),
+        this.getProjectCursorRules(),
+        this.getCursorSettingsUserRule(),
+      ]);
+
+      return {
+        success: true,
+        data: {
+          cursorrules,
+          projectRules: projectRules.success ? projectRules.rules : [],
+          cursorUserRule: cursorUserRule.success
+            ? cursorUserRule.userRule || ""
+            : "",
+        },
+      };
+    } catch (error) {
+      console.error("获取所有规则信息失败:", error);
+      return {
+        success: false,
+        data: {
+          cursorrules: "",
+          projectRules: [],
+          cursorUserRule: "",
+        },
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   }
 
@@ -1680,6 +1980,34 @@ export class CursorIntegration {
   ): Promise<{ data: { count: number }; message: string }> {
     // 这个方法不应该直接调用，应该通过webview任务处理器
     throw new Error("此方法应该通过webview任务处理器调用");
+  }
+
+  /**
+   * 更新用户规则
+   */
+  async updateUserRules(rules: string): Promise<boolean> {
+    try {
+      const rulesPath = this.findRulesPath();
+      if (!rulesPath) {
+        console.error("Rules path not found");
+        return false;
+      }
+
+      // 确保目录存在
+      const rulesDir = path.dirname(rulesPath);
+      if (!fs.existsSync(rulesDir)) {
+        fs.mkdirSync(rulesDir, { recursive: true });
+      }
+
+      // 保存为纯文本格式
+      fs.writeFileSync(rulesPath, rules, "utf8");
+      console.log("规则已保存到:", rulesPath);
+
+      return true;
+    } catch (error) {
+      console.error("Error updating user rules:", error);
+      return false;
+    }
   }
 }
 

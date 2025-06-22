@@ -35,7 +35,10 @@ type Tasks =
   | "batchUpdateMcpConfig"
   | "shareMcpConfig"
   | "getMcpConfigByShareId"
-  | "addMcpByShareId";
+  | "addMcpByShareId"
+  | "getProjectCursorRules"
+  | "getCursorSettingsUserRule"
+  | "getAllRulesInfo";
 
 // 当前的webview列表
 let webviewPanelList: {
@@ -1602,6 +1605,142 @@ taskMap["cursor:addMcpByShareId"] = async (
     }
   } catch (error: unknown) {
     console.error("addMcpByShareId task failed:", error);
+    // 发送错误回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+    }
+  }
+};
+
+// 添加获取项目 Cursor 规则任务
+taskMap.getProjectCursorRules = async (
+  context: vscode.ExtensionContext,
+  message: TaskMessage
+) => {
+  try {
+    console.log("处理 getProjectCursorRules 任务...");
+    const cursorIntegration = new CursorIntegration();
+    const result = await cursorIntegration.getProjectCursorRules();
+
+    console.log("getProjectCursorRules 结果:", result);
+
+    // 发送结果回 webview - 修复返回格式，确保前端能正确访问数据
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: result.success,
+          data: {
+            rules: result.rules || [], // 直接提取 rules 字段
+          },
+          error: result.error,
+        },
+      });
+    }
+  } catch (error: unknown) {
+    console.error("getProjectCursorRules 任务失败:", error);
+    // 发送错误回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+    }
+  }
+};
+
+// 添加 Cursor 设置用户规则任务处理器
+taskMap.getCursorSettingsUserRule = async (
+  context: vscode.ExtensionContext,
+  message: TaskMessage
+) => {
+  try {
+    console.log("处理 getCursorSettingsUserRule 任务...");
+    const cursorIntegration = new CursorIntegration();
+    const result = await cursorIntegration.getCursorSettingsUserRule();
+
+    console.log("getCursorSettingsUserRule 结果:", result);
+
+    // 发送结果回 webview - 修复返回格式，确保前端能正确访问数据
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: result.success,
+          data: {
+            userRule: result.userRule || "", // 直接提取 userRule 字段
+          },
+          error: result.error,
+        },
+      });
+    }
+  } catch (error: unknown) {
+    console.error("getCursorSettingsUserRule 任务失败:", error);
+    // 发送错误回 webview
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        },
+      });
+    }
+  }
+};
+
+// 添加获取所有规则信息任务处理器
+taskMap.getAllRulesInfo = async (
+  context: vscode.ExtensionContext,
+  message: TaskMessage
+) => {
+  try {
+    console.log("处理 getAllRulesInfo 任务...");
+    const cursorIntegration = new CursorIntegration();
+    const result = await cursorIntegration.getAllRulesInfo();
+
+    console.log("getAllRulesInfo 结果:", result);
+
+    // 发送结果回 webview - 修复返回格式
+    const panels = webviewPanelList.filter(
+      (panel) => panel.key === "cursor" || panel.key === "main"
+    );
+    if (panels.length > 0 && message.cbid) {
+      panels[0].panel.webview.postMessage({
+        cbid: message.cbid,
+        data: {
+          success: result.success,
+          data: result.data, // 返回 data 字段
+          error: result.error,
+        },
+      });
+    }
+  } catch (error: unknown) {
+    console.error("getAllRulesInfo 任务失败:", error);
     // 发送错误回 webview
     const panels = webviewPanelList.filter(
       (panel) => panel.key === "cursor" || panel.key === "main"
