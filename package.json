@@ -3,7 +3,7 @@
   "name": "diflow",
   "displayName": "DiFlow",
   "description": "DiFlow，开发小工具",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "icon": "images/title.jpg",
   "engines": {
     "vscode": "^1.83.0"
@@ -202,7 +202,16 @@
     "dev:backend": "cd server && yarn dev",
     "quick:start": "concurrently \"yarn dev:plugin\" \"yarn dev:frontend\" \"yarn dev:backend\"",
     "clean": "rm -rf node_modules webview-vue/node_modules server/node_modules dist webview-vue/dist server/dist",
-    "fresh:install": "yarn clean && yarn setup"
+    "fresh:install": "yarn clean && yarn setup",
+    "publish": "node publish.js",
+    "publish:patch": "node publish.js patch",
+    "publish:minor": "node publish.js minor",
+    "publish:major": "node publish.js major",
+    "publish:help": "node publish.js --help",
+    "release": "node publish-simple.js",
+    "release:patch": "node publish-simple.js patch",
+    "release:minor": "node publish-simple.js minor",
+    "release:major": "node publish-simple.js major"
   },
   "devDependencies": {
     "@commitlint/cli": "^17.7.2",
