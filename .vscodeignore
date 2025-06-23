@@ -1,0 +1,84 @@
+# Source files
+src/
+webview-vue/src/
+webview-vue/public/
+webview-vue/node_modules/
+webview-vue/dist/
+webview-vue/yarn.lock
+webview-vue/package-lock.json
+
+# Build tools
+webpack.config.js
+vite.config.ts
+tsconfig.json
+.eslintrc.js
+.prettierrc
+
+# Development files
+dev-*.js
+yarn.lock
+package-lock.json
+
+# Node modules
+node_modules/
+server/node_modules/
+server/src/
+server/dist/
+server/yarn.lock
+server/package-lock.json
+
+# Git
+.git/
+.gitignore
+
+# VS Code
+.vscode/**
+.vscode-test/**
+*.vsix
+
+# Tests
+test/
+out/
+coverage/
+
+# Documentation
+README.md
+CHANGELOG.md
+docs/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+*.swp
+*.swo
+
+# Other
+cursor_project_rules/
+implementation-plan.mdc
+
+# New additions from the code block
+.yarnrc
+vsc-extension-quickstart.md
+**/tsconfig.json
+**/.eslintrc.json
+**/*.map
+**/*.ts
+webview-vue/src/**
+webview-vue/public/**
+webview-vue/index.html
+webview-vue/vite.config.ts
+webview-vue/tsconfig.json
+webview-vue/package.json
+server

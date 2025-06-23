@@ -160,23 +160,28 @@ export const showWebView = (
   }
 };
 
-// 获取 webview html
+/**
+ * 获取 webview html
+ */
 export const getHtmlForWebview = (
   context: vscode.ExtensionContext,
   webview: vscode.Webview
 ) => {
+  // 修复环境判断逻辑
   const isProduction =
     context.extensionMode === vscode.ExtensionMode.Production;
   let srcUrl: string | vscode.Uri = "";
   console.log("isProduction", isProduction);
 
   if (isProduction) {
+    // 生产环境：使用打包后的文件
     console.log("webview-dist/main.mjs");
     const mainScriptPathOnDisk = vscode.Uri.file(
       path.join(context.extensionPath, "webview-dist", "main.mjs")
     );
     srcUrl = webview.asWebviewUri(mainScriptPathOnDisk);
   } else {
+    // 开发环境：使用本地开发服务器
     console.log("localhost:7979/src/main.ts");
     srcUrl = "http://localhost:7979/src/main.ts";
   }
@@ -184,14 +189,16 @@ export const getHtmlForWebview = (
   return getWebviewContent(srcUrl);
 };
 
-// webview html 容器
+/**
+ * webview html 容器
+ */
 const getWebviewContent = (srcUri: string | vscode.Uri) => {
   return `<!doctype html>
     <html lang="en">
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
-      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' vscode-webview: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; style-src 'unsafe-inline' vscode-webview: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; connect-src vscode-webview: http://localhost:* https://localhost:* ws://localhost:* wss://localhost:* http://127.0.0.1:* https://127.0.0.1:* ws://127.0.0.1:* wss://127.0.0.1:*; img-src vscode-webview: data: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; font-src vscode-webview: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*;">
+      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' vscode-webview: vscode-resource: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; style-src 'unsafe-inline' vscode-webview: vscode-resource: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; connect-src vscode-webview: vscode-resource: http://localhost:* https://localhost:* ws://localhost:* wss://localhost:* http://127.0.0.1:* https://127.0.0.1:* ws://127.0.0.1:* wss://127.0.0.1:*; img-src vscode-webview: vscode-resource: data: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*; font-src vscode-webview: vscode-resource: http://localhost:* https://localhost:* http://127.0.0.1:* https://127.0.0.1:*;">
       <title>webview-react</title>
       <script>
          window.vscode = acquireVsCodeApi();
@@ -201,7 +208,7 @@ const getWebviewContent = (srcUri: string | vscode.Uri) => {
            },
          }
          // 添加调试信息
-         console.log("Webview CSP configured for localhost and 127.0.0.1");
+         console.log("Webview CSP configured for vscode-resource, localhost and 127.0.0.1");
       </script>
     </head>
     <body>

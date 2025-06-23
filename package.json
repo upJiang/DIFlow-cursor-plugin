@@ -178,8 +178,10 @@
   "repository": "https://github.com/upJiang/jiang-vscode-plugin",
   "scripts": {
     "dev": "yarn --cwd \"webview-vue\" dev",
-    "build": "yarn --cwd \"webview-vue\" build",
-    "vscode:prepublish": "webpack --mode production && yarn --cwd \"webview-vue\" build",
+    "build": "npm run build:server && npm run build:webview",
+    "build:server": "webpack --mode production",
+    "build:webview": "yarn --cwd \"webview-vue\" build --mode production",
+    "vscode:prepublish": "cp server/.env.prod server/.env && npm run build && rm server/.env",
     "watch": "webpack --watch",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
@@ -211,7 +213,8 @@
     "release": "node publish-simple.js",
     "release:patch": "node publish-simple.js patch",
     "release:minor": "node publish-simple.js minor",
-    "release:major": "node publish-simple.js major"
+    "release:major": "node publish-simple.js major",
+    "package": "webpack --mode production && yarn --cwd \"webview-vue\" build --mode production && vsce package"
   },
   "devDependencies": {
     "@commitlint/cli": "^17.7.2",
