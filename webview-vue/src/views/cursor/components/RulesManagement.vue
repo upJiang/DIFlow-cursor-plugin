@@ -51,6 +51,15 @@
                     closable
                   />
                 </div>
+                <!-- 预览区域 -->
+                <div v-if="props.cursorRules" class="rules-preview">
+                  <a-divider>预览</a-divider>
+                  <MarkdownRenderer
+                    :content="props.cursorRules"
+                    title=".cursorrules 预览"
+                    :show-header="true"
+                  />
+                </div>
               </div>
             </a-tab-pane>
 
@@ -92,7 +101,11 @@
                             </a-tag>
                           </a-space>
                         </template>
-                        <pre class="rule-content">{{ rule.content }}</pre>
+                        <MarkdownRenderer
+                          :content="rule.content"
+                          :title="rule.name + '.mdc'"
+                          :show-header="true"
+                        />
                         <div class="rule-path">
                           <a-typography-text
                             type="secondary"
@@ -124,7 +137,11 @@
                 </div>
                 <div v-else>
                   <a-card size="small" title="Cursor 用户规则">
-                    <pre class="rule-content">{{ cursorUserRule }}</pre>
+                    <MarkdownRenderer
+                      :content="cursorUserRule"
+                      title="Cursor 用户规则"
+                      :show-header="true"
+                    />
                     <div class="rules-help" style="margin-top: 12px">
                       <a-alert
                         message="说明"
@@ -218,6 +235,7 @@ import {
 import { message } from "ant-design-vue";
 import { onMounted, ref } from "vue";
 
+import MarkdownRenderer from "../../../components/MarkdownRenderer.vue";
 import { sendTaskToVscode } from "../../../utils/vscodeUtils";
 
 interface ProjectRule {
@@ -337,6 +355,10 @@ onMounted(() => {
   width: 100%;
 }
 
+.rules-preview {
+  margin-top: 16px;
+}
+
 .rules-help {
   margin-top: 16px;
 }
@@ -347,20 +369,6 @@ onMounted(() => {
 
 .rule-item {
   width: 100%;
-}
-
-.rule-content {
-  background: #f5f5f5;
-  padding: 12px;
-  border-radius: 4px;
-  margin: 8px 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-family: "Courier New", monospace;
-  font-size: 13px;
-  line-height: 1.4;
-  max-height: 200px;
-  overflow-y: auto;
 }
 
 .rule-path {
