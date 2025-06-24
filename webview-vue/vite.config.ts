@@ -20,6 +20,7 @@ export default defineConfig({
   },
   // 打包配置
   build: {
+    emptyOutDir: true, // 构建前清空输出目录
     lib: {
       entry: path.resolve(__dirname, "./src/main.ts"), // 设置入口文件【这里也可以直接引用插件.vue根组件】
       name: "main", // 起个名字，安装、引入用
@@ -36,6 +37,9 @@ export default defineConfig({
           vue: "Vue",
           helloword: "helloword", // 这里暴露出去一个全局变量
         },
+        // 禁用文件名哈希，保持文件名一致
+        entryFileNames: "main.mjs",
+        chunkFileNames: "index-[hash].mjs",
       },
     },
     outDir: "../webview-dist",

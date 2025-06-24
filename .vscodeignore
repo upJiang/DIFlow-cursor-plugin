@@ -75,10 +75,5 @@ vsc-extension-quickstart.md
 **/.eslintrc.json
 **/*.map
 **/*.ts
-webview-vue/src/**
-webview-vue/public/**
-webview-vue/index.html
-webview-vue/vite.config.ts
-webview-vue/tsconfig.json
-webview-vue/package.json
+webview-vue
 server
